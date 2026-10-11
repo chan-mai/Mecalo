@@ -1,6 +1,6 @@
 # Mecalo
 
-[![CI](https://img.shields.io/github/actions/workflow/status/chan-mai/Mecalo/ci.yaml?branch=main&style=flat-square&logo=github&logoColor=white&label=CI&color=B9DEFF)](https://github.com/chan-mai/Mecalo/actions/workflows/ci.yaml)
+[![CI](https://img.shields.io/github/actions/workflow/status/chan-mai/Mecalo/ci.yaml?branch=develop&style=flat-square&logo=github&logoColor=white&label=CI&color=B9DEFF)](https://github.com/chan-mai/Mecalo/actions/workflows/ci.yaml)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-B9DEFF?style=flat-square)](./LICENSE)
 
 ![Go](https://img.shields.io/badge/Go-00ADD8?style=flat-square&logo=go&logoColor=white)
