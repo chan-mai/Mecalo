@@ -28,7 +28,7 @@ build:
 	cd backend && go build -o bin/mecalo ./cmd/mecalo
 	pnpm --filter @mecalo/frontend build
 
-# assets/blender/foods.blend の Foods コレクションを glTF へ書き出し
+# assets/blender/の各.blendのコレクションをglTFへ書き出し
 BLENDER ?= blender
 models:
 	$(BLENDER) -b assets/blender/foods.blend --python-expr "import bpy; [o.select_set(o.name in bpy.data.collections['Foods'].objects) for o in bpy.context.scene.objects]; bpy.ops.export_scene.gltf(filepath='frontend/public/models/foods.glb', export_format='GLB', use_selection=True, export_apply=True)"
