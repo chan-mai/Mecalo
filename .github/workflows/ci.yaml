@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Start CockroachDB
+        run: |
+          docker run -d --name crdb -p 26258:26257 cockroachdb/cockroach:latest-v25.2 start-single-node --insecure
+          for i in $(seq 1 30); do docker exec crdb ./cockroach sql --insecure -e "SELECT 1" && break; sleep 2; done
+      - name: Vet
+        working-directory: backend
+        run: go vet ./...
+      - name: Lint
+        working-directory: backend
+        run: go tool golangci-lint run ./...
+      - name: Test
+        working-directory: backend
+        env:
+          MECALO_TEST_POSTGRES_DSN: postgresql://root@localhost:26258/defaultdb?sslmode=disable
+        run: go test ./...
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check generated code is up to date
+        run: |
+          make gen
+          git diff --exit-code
+      - name: Lint
+        run: pnpm --filter @mecalo/frontend lint
+      - name: Typecheck
+        run: pnpm --filter @mecalo/frontend typecheck
+      - name: Build
+        run: pnpm --filter @mecalo/frontend build

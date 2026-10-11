@@ -1,0 +1,10 @@
+services:
+  workspace:
+    image: mcr.microsoft.com/devcontainers/go:2-1.26-bookworm
+    volumes:
+      - ..:/workspaces/mecalo:cached
+    command: sleep infinity
+
+  cockroach:
+    image: cockroachdb/cockroach:latest-v25.2
+    command: start-single-node --insecure

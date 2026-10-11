@@ -1,0 +1,21 @@
+{
+  "name": "mecalo",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@10.17.1",
+  "scripts": {
+    "gen": "pnpm --filter @mecalo/api run build && pnpm --filter @mecalo/frontend run gen:api",
+    "lint": "pnpm --filter @mecalo/frontend run lint",
+    "typecheck": "pnpm --filter @mecalo/frontend run typecheck",
+    "test": "pnpm --filter @mecalo/frontend run test"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "esbuild"
+    ]
+  }
+}

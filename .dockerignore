@@ -1,0 +1,8 @@
+**/node_modules
+**/.nuxt
+**/.output
+**/*.db
+**/*.db-*
+.git
+.devcontainer
+backend

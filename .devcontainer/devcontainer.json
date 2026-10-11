@@ -1,0 +1,28 @@
+{
+  "name": "Mecalo",
+  "dockerComposeFile": "compose.yaml",
+  "service": "workspace",
+  "workspaceFolder": "/workspaces/mecalo",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "24" }
+  },
+  "forwardPorts": [3000, 8080],
+  "postCreateCommand": "corepack enable && pnpm install && cd backend && go mod download",
+  "remoteEnv": {
+    "MECALO_DATABASE_URL": "/workspaces/mecalo/backend/data/dev.db",
+    "MECALO_SECURE_COOKIE": "false",
+    "MECALO_TEST_POSTGRES_DSN": "postgresql://root@cockroach:26257/defaultdb?sslmode=disable",
+    "NUXT_MECALO_BE_API_URI": "http://localhost:8080"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "Vue.volar",
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss",
+        "typespec.typespec-vscode"
+      ]
+    }
+  }
+}

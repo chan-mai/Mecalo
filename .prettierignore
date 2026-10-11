@@ -1,0 +1,6 @@
+*.vue
+**/*.gen.ts
+**/gen/**
+node_modules
+.nuxt
+.output

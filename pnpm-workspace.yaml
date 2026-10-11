@@ -1,0 +1,6 @@
+packages:
+  - api
+  - frontend
+
+# 公開後7日未満
+minimumReleaseAge: 10080
