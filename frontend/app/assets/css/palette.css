@@ -1,0 +1,85 @@
+/*
+ * Mecalo — Sakura Soda / Light
+ * Palette revision: 1.0 (2026-10-12)
+ *
+ * A11y usage rules:
+ * - On pastel brand colors, use --foreground (never white text).
+ * - On --primary-strong, use --primary-strong-foreground.
+ * - --muted-foreground and --subtle-foreground are for light surfaces,
+ *   NOT for text on brand pastels.
+ * - --border and --divider are decorative only. For visible controls,
+ *   use --control-border; for soft buttons needing defined boundaries,
+ *   use --action-border.
+ * - Charts: use dark --chart-* colors for meaningful lines/bars and
+ *   --chart-*-soft for decorative fills. Always show legends/values.
+ * - For focus indicators, use a visible outline and adequate spacing
+ *   from the element, especially on dark filled controls.
+ * - Contrast checks cover named color pairs, not entire WCAG conformance.
+ */
+:root {
+	color-scheme: light;
+
+	/* Brand */
+	--brand-primary: #B9DEFF;    /* Soda blue */
+	--brand-secondary: #F6BED6;  /* Sakura pink */
+	--brand-tertiary: #DDD6FF;   /* Soft lavender */
+	--brand-cream: #FFF9FC;
+
+	/* Interactive controls */
+	--primary: #B9DEFF;
+	--primary-hover: #A8D6F7;
+	--primary-mid: #7FB8F2;
+	--primary-foreground: #25324A;
+	--primary-strong: #3D6DAA;
+	--primary-strong-hover: #315C94;
+	--primary-strong-foreground: #FFFFFF;
+	--secondary: #F6BED6;
+	--secondary-foreground: #25324A;
+	--accent: #DDD6FF;
+	--accent-foreground: #25324A;
+
+	/* Backgrounds and surfaces */
+	--background: #FFF9FC;
+	--background-subtle: #F8FBFF;
+	--surface: #FFFFFF;
+	--surface-soft: #F5FAFF;
+	--surface-pink: #FFF3F8;
+	--surface-lavender: #F7F4FF;
+
+	/* Typography */
+	--foreground: #25324A;
+	--muted-foreground: #5E6A80;
+	--subtle-foreground: #626F83;
+
+	/* Dividers are decorative; control borders are functional */
+	--border: #D9E3F2;
+	--border-subtle: #E9EEF7;
+	--divider: #E8EDF5;
+	--control-border: #7489A5;
+	--action-border: #3D6DAA;
+	--focus-ring: #4974AD;
+
+	/* Statuses: always pair bg and fg; do not use hue alone */
+	--success-bg: #E8F6EC;
+	--success-fg: #276C3E;
+	--warning-bg: #FFF4DF;
+	--warning-fg: #80591D;
+	--danger-bg: #FDEBEC;
+	--danger-fg: #A13F52;
+	--info-bg: #EAF3FF;
+	--info-fg: #335E9C;
+
+	/* Nutrient charts: dark data ink + complementary pastel */
+	--chart-protein: #4571B5;
+	--chart-protein-soft: #7FA7F7;
+	--chart-fat: #B14C78;
+	--chart-fat-soft: #F3A8C8;
+	--chart-carbs: #966415;
+	--chart-carbs-soft: #F5C97A;
+	--chart-fiber: #387C5B;
+	--chart-fiber-soft: #86CFA5;
+	--chart-vitamin: #7152B0;
+	--chart-vitamin-soft: #A995F2;
+	--chart-mineral: #277E84;
+	--chart-mineral-soft: #7CC7C9;
+}
