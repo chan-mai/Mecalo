@@ -1,0 +1,41 @@
+version: "2"
+
+linters:
+  enable:
+    - bodyclose
+    - errorlint
+    - gocritic
+    - misspell
+    - nilerr
+    - revive
+    - sqlclosecheck
+    - unconvert
+  settings:
+    errcheck:
+      # 読込エラーはrows.Errで検査
+      exclude-functions:
+        - (*database/sql.Rows).Close
+        - (*database/sql.DB).Close
+        - (*github.com/chan-mai/mecalo/backend/internal/adapter/sqlstore.Store).Close
+        - (github.com/chan-mai/mecalo/backend/internal/port.Store).Close
+    revive:
+      rules:
+        # コメント規約(主語省略・日本語)と衝突
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
+  exclusions:
+    presets:
+      - std-error-handling
+    paths:
+      - internal/adapter/httpapi/gen
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/chan-mai/mecalo
