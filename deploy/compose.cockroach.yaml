@@ -1,0 +1,26 @@
+# CockroachDB利用時に重ねて指定
+# docker compose -f deploy/compose.yaml -f deploy/compose.cockroach.yaml up -d
+services:
+  cockroach:
+    image: cockroachdb/cockroach:latest-v25.2
+    command: start-single-node --insecure
+    restart: unless-stopped
+    environment:
+      COCKROACH_DATABASE: mecalo
+    volumes:
+      - cockroach-data:/cockroach/cockroach-data
+    healthcheck:
+      test: ["CMD", "./cockroach", "sql", "--insecure", "-e", "SELECT 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    environment:
+      MECALO_DATABASE_URL: postgresql://root@cockroach:26257/mecalo?sslmode=disable
+    depends_on:
+      cockroach:
+        condition: service_healthy
+
+volumes:
+  cockroach-data:

@@ -1,0 +1,38 @@
+# 起動: docker compose -f deploy/compose.yaml up -d
+# 成分表の取込: docker compose -f deploy/compose.yaml run --rm backend import mext
+name: mecalo
+
+services:
+  backend:
+    build: ../backend
+    restart: unless-stopped
+    environment:
+      MECALO_DATABASE_URL: ${MECALO_DATABASE_URL:-/data/mecalo.db}
+      MECALO_TIMEZONE: ${MECALO_TIMEZONE:-Asia/Tokyo}
+      MECALO_AUTH_PROVIDERS: ${MECALO_AUTH_PROVIDERS:-local}
+      MECALO_REGISTRATION: ${MECALO_REGISTRATION:-closed}
+      MECALO_SECURE_COOKIE: ${MECALO_SECURE_COOKIE:-false}
+      MECALO_OIDC_NAME: ${MECALO_OIDC_NAME:-}
+      MECALO_OIDC_ISSUER: ${MECALO_OIDC_ISSUER:-}
+      MECALO_OIDC_CLIENT_ID: ${MECALO_OIDC_CLIENT_ID:-}
+      MECALO_OIDC_CLIENT_SECRET: ${MECALO_OIDC_CLIENT_SECRET:-}
+      MECALO_OIDC_REDIRECT_URL: ${MECALO_OIDC_REDIRECT_URL:-}
+      MECALO_OIDC_AUTO_PROVISION: ${MECALO_OIDC_AUTO_PROVISION:-false}
+      MECALO_OPENFOODFACTS_LOOKUP: ${MECALO_OPENFOODFACTS_LOOKUP:-false}
+    volumes:
+      - mecalo-data:/data
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    environment:
+      NUXT_MECALO_BE_API_URI: http://backend:8080
+    ports:
+      - "${MECALO_PORT:-3000}:3000"
+    depends_on:
+      - backend
+
+volumes:
+  mecalo-data:
