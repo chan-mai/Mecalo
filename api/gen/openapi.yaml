@@ -1,0 +1,3230 @@
+openapi: 3.0.0
+info:
+  title: Mecalo API
+  version: 0.1.0
+  license:
+    name: AGPL-3.0-only
+tags:
+  - name: auth
+  - name: admin
+  - name: foods
+  - name: recipes
+  - name: meals
+  - name: reports
+  - name: settings
+  - name: weights
+  - name: reference
+  - name: data
+  - name: system
+paths:
+  /admin/users:
+    get:
+      operationId: AdminApi_list
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - admin
+    post:
+      operationId: AdminApi_create
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+  /admin/users/{id}:
+    delete:
+      operationId: AdminApi_delete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - admin
+  /auth/config:
+    get:
+      operationId: AuthApi_config
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthConfig'
+      tags:
+        - auth
+      security:
+        - {}
+  /auth/login:
+    post:
+      operationId: AuthApi_login
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      security:
+        - {}
+  /auth/logout:
+    post:
+      operationId: AuthApi_logout
+      parameters: []
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+      tags:
+        - auth
+  /auth/oidc/callback:
+    get:
+      operationId: AuthApi_oidcCallback
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+        - name: error
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+      responses:
+        '302':
+          description: Redirection
+          headers:
+            location:
+              required: true
+              schema:
+                type: string
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
+      security:
+        - {}
+  /auth/oidc/start:
+    get:
+      operationId: AuthApi_oidcStart
+      description: OIDC認可リクエストへリダイレクト
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+      responses:
+        '302':
+          description: Redirection
+          headers:
+            location:
+              required: true
+              schema:
+                type: string
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
+      security:
+        - {}
+  /auth/setup:
+    post:
+      operationId: AuthApi_setup
+      description: 利用者0件時のみ管理者を作成しログイン
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+      security:
+        - {}
+  /auth/signup:
+    post:
+      operationId: AuthApi_signUp
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+      security:
+        - {}
+  /days/{date}:
+    get:
+      operationId: DaysApi_get
+      description: 記録・集計・目標評価・体重をまとめてレスポンス
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DayView'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - meals
+  /export/json:
+    get:
+      operationId: ExportApi_json
+      description: 全データ, 取込にそのまま利用可能
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            content-disposition:
+              required: true
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportBundle'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - data
+  /export/meals.csv:
+    get:
+      operationId: ExportApi_mealsCsv
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            content-disposition:
+              required: true
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - data
+  /export/weights.csv:
+    get:
+      operationId: ExportApi_weightsCsv
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            content-disposition:
+              required: true
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - data
+  /favorites:
+    get:
+      operationId: FavoritesApi_list
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Food'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+  /foods:
+    get:
+      operationId: FoodsApi_search
+      description: 検索履歴・記録頻度・お気に入りを加味した順でレスポンス
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          explode: false
+        - name: kind
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/FoodKind'
+          explode: false
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 30
+          explode: false
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Food'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+    post:
+      operationId: FoodsApi_create
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Food'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodInput'
+  /foods/barcode:
+    get:
+      operationId: FoodsApi_getByBarcode
+      description: ローカルDB優先, 未登録時は外部照会が有効な場合のみ照会
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Food'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+  /foods/mine:
+    get:
+      operationId: FoodsApi_listMine
+      description: 自分が登録した食品
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Food'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+  /foods/{id}:
+    get:
+      operationId: FoodsApi_get
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Food'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+    put:
+      operationId: FoodsApi_update
+      description: 新リビジョンとして保存, 過去の記録は不変
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Food'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodInput'
+    delete:
+      operationId: FoodsApi_delete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+  /foods/{id}/favorite:
+    put:
+      operationId: FoodsApi_addFavorite
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+    delete:
+      operationId: FoodsApi_removeFavorite
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+  /foods/{id}/revisions:
+    get:
+      operationId: FoodsApi_listRevisions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodRevision'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+  /foods/{id}/selections:
+    post:
+      operationId: FoodsApi_recordSelection
+      description: 検索結果から選んだ食品を検索語と対応付け, 次回から上位に表示
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodSelection'
+  /health:
+    get:
+      operationId: HealthApi_get
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - ok
+                required:
+                  - status
+      tags:
+        - system
+      security:
+        - {}
+  /import:
+    post:
+      operationId: ImportApi_json
+      description: exportJsonの出力を取込, 既存IDは読み飛ばし
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportBundle'
+  /me:
+    get:
+      operationId: MeApi_get
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
+  /me/password:
+    put:
+      operationId: MeApi_changePassword
+      parameters: []
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChange'
+  /meals:
+    post:
+      operationId: MealsApi_add
+      description: clientRefが既存なら既存の記録をレスポンス
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealEntry'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - meals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddMealEntry'
+  /meals/copy:
+    post:
+      operationId: MealsApi_copy
+      description: 食品の現行データで再計算, 削除済み食品は元の値を複製
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MealEntry'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - meals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CopyMeals'
+  /meals/quick-picks:
+    get:
+      operationId: MealsApi_quickPicks
+      description: 記録画面の候補
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuickPicks'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - meals
+  /meals/{id}:
+    patch:
+      operationId: MealsApi_update
+      description: 数量変更時は記録時の食品データで再計算
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealEntry'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - meals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMealEntry'
+    delete:
+      operationId: MealsApi_delete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - meals
+  /meals/{id}/recalculate:
+    post:
+      operationId: MealsApi_recalculate
+      description: 食品の現行データで栄養値を再計算
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealEntry'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - meals
+  /recipes:
+    post:
+      operationId: RecipesApi_create
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - recipes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipeInput'
+  /recipes/{id}:
+    get:
+      operationId: RecipesApi_get
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - recipes
+    put:
+      operationId: RecipesApi_update
+      description: 材料の現行データで再計算し新リビジョンとして保存
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - recipes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipeInput'
+  /reference/datasets:
+    get:
+      operationId: ReferenceApi_datasets
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dataset'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - reference
+  /reference/dri:
+    get:
+      operationId: ReferenceApi_dietaryReference
+      description: 目標算出に使う食事摂取基準
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceInfo'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - reference
+  /reference/nutrients:
+    get:
+      operationId: ReferenceApi_nutrients
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NutrientDefinition'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - reference
+  /reports/daily/{date}:
+    get:
+      operationId: ReportsApi_daily
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyReport'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - reports
+  /reports/range:
+    get:
+      operationId: ReportsApi_range
+      description: 最大366日
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          explode: false
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RangeReport'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - reports
+  /search-history:
+    get:
+      operationId: SearchHistoryApi_list
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+    delete:
+      operationId: SearchHistoryApi_clear
+      parameters: []
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+  /settings:
+    get:
+      operationId: SettingsApi_get
+      description: 当日時点の設定
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - settings
+    put:
+      operationId: SettingsApi_save
+      description: 同一の適用開始日は上書き
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsInput'
+  /settings/history:
+    get:
+      operationId: SettingsApi_history
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Settings'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - settings
+  /targets/{date}:
+    get:
+      operationId: TargetsApi_get
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Targets'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - settings
+  /weights:
+    get:
+      operationId: WeightsApi_list
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          explode: false
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Weight'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - weights
+  /weights/{date}:
+    put:
+      operationId: WeightsApi_save
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Weight'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - weights
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeightInput'
+    delete:
+      operationId: WeightsApi_delete
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - weights
+security:
+  - SessionCookie: []
+components:
+  schemas:
+    ActivityLevel:
+      type: string
+      enum:
+        - low
+        - moderate
+        - high
+    AddMealEntry:
+      type: object
+      required:
+        - date
+        - slot
+        - foodId
+        - quantity
+      properties:
+        date:
+          type: string
+          format: date
+        slot:
+          $ref: '#/components/schemas/MealSlot'
+        foodId:
+          type: string
+        quantity:
+          $ref: '#/components/schemas/Quantity'
+        clientRef:
+          type: string
+          maxLength: 64
+          description: 再送時の重複防止キー
+    AuthConfig:
+      type: object
+      required:
+        - setupRequired
+        - registrationOpen
+        - localEnabled
+        - oidcEnabled
+      properties:
+        setupRequired:
+          type: boolean
+          description: 利用者0件で初回セットアップが必要
+        registrationOpen:
+          type: boolean
+        localEnabled:
+          type: boolean
+        oidcEnabled:
+          type: boolean
+        oidcName:
+          type: string
+          description: ログイン画面に表示するOIDCプロバイダ名
+    CopyMeals:
+      type: object
+      required:
+        - fromDate
+        - toDate
+      properties:
+        fromDate:
+          type: string
+          format: date
+        fromSlot:
+          allOf:
+            - $ref: '#/components/schemas/MealSlot'
+          description: 省略時は全区分
+        toDate:
+          type: string
+          format: date
+        toSlot:
+          allOf:
+            - $ref: '#/components/schemas/MealSlot'
+          description: 省略時は元と同じ区分
+    CreateUserRequest:
+      type: object
+      required:
+        - loginName
+        - password
+        - role
+      properties:
+        loginName:
+          type: string
+          pattern: ^[a-zA-Z0-9_.-]{3,32}$
+        password:
+          type: string
+          minLength: 8
+        displayName:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+    Credentials:
+      type: object
+      required:
+        - loginName
+        - password
+      properties:
+        loginName:
+          type: string
+          pattern: ^[a-zA-Z0-9_.-]{3,32}$
+        password:
+          type: string
+          minLength: 8
+    DailyReport:
+      type: object
+      required:
+        - summary
+        - evaluations
+      properties:
+        summary:
+          $ref: '#/components/schemas/DaySummary'
+        targets:
+          allOf:
+            - $ref: '#/components/schemas/Targets'
+          description: 身体情報・体重が未登録なら省略
+        evaluations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evaluation'
+    Dataset:
+      type: object
+      required:
+        - id
+        - kind
+        - name
+        - version
+        - license
+        - url
+        - attribution
+        - importedAt
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        license:
+          type: string
+        url:
+          type: string
+        attribution:
+          type: string
+        importedAt:
+          type: string
+          format: date-time
+    DaySummary:
+      type: object
+      required:
+        - date
+        - entryCount
+        - total
+        - bySlot
+      properties:
+        date:
+          type: string
+          format: date
+        entryCount:
+          type: integer
+          format: int32
+        total:
+          $ref: '#/components/schemas/NutrientProfile'
+        bySlot:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/NutrientProfile'
+    DayView:
+      type: object
+      required:
+        - date
+        - entries
+        - report
+      properties:
+        date:
+          type: string
+          format: date
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/MealEntry'
+        report:
+          $ref: '#/components/schemas/DailyReport'
+        latestWeight:
+          allOf:
+            - $ref: '#/components/schemas/Weight'
+          description: 当日以前で最新の体重
+      description: ホーム画面用の1日分
+    Evaluation:
+      type: object
+      required:
+        - code
+        - level
+        - value
+      properties:
+        code:
+          type: string
+        level:
+          $ref: '#/components/schemas/Level'
+        value:
+          $ref: '#/components/schemas/NutrientValue'
+        lower:
+          type: number
+          format: double
+        upper:
+          type: number
+          format: double
+    ExportBundle:
+      type: object
+      required:
+        - format
+        - version
+        - exportedAt
+        - user
+        - settings
+        - weights
+        - foods
+        - favorites
+        - meals
+      properties:
+        format:
+          type: string
+          enum:
+            - mecalo-export
+        version:
+          type: number
+          enum:
+            - 1
+        exportedAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/User'
+        settings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Settings'
+        weights:
+          type: array
+          items:
+            $ref: '#/components/schemas/Weight'
+        foods:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportFood'
+        favorites:
+          type: array
+          items:
+            type: string
+        meals:
+          type: array
+          items:
+            $ref: '#/components/schemas/MealEntry'
+      description: 1利用者分の全データ
+    ExportFood:
+      type: object
+      required:
+        - id
+        - kind
+        - barcode
+        - createdAt
+        - revisions
+      properties:
+        id:
+          type: string
+        kind:
+          $ref: '#/components/schemas/FoodKind'
+        barcode:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+        revisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodRevision'
+          description: 番号順の全リビジョン
+        recipes:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/RecipeComposition'
+          description: recipe種別のみ, キーはリビジョンID
+    Food:
+      type: object
+      required:
+        - id
+        - kind
+        - barcode
+        - editable
+        - favorite
+        - deleted
+        - revision
+      properties:
+        id:
+          type: string
+        kind:
+          $ref: '#/components/schemas/FoodKind'
+        barcode:
+          type: string
+        editable:
+          type: boolean
+          description: 所有し編集可能
+        favorite:
+          type: boolean
+        deleted:
+          type: boolean
+        revision:
+          $ref: '#/components/schemas/FoodRevision'
+    FoodInput:
+      type: object
+      required:
+        - name
+        - nutrients
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        brand:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
+          maxItems: 20
+          description: 検索対象の別名
+        barcode:
+          type: string
+        nutrients:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/NutrientInput'
+        portions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Portion'
+    FoodKind:
+      type: string
+      enum:
+        - standard
+        - product
+        - custom
+        - recipe
+    FoodRevision:
+      type: object
+      required:
+        - id
+        - number
+        - name
+        - brand
+        - aliases
+        - nutrients
+        - portions
+        - source
+        - createdAt
+      properties:
+        id:
+          type: string
+        number:
+          type: integer
+          format: int32
+        name:
+          type: string
+        brand:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
+          description: 検索対象の別名
+        nutrients:
+          allOf:
+            - $ref: '#/components/schemas/NutrientProfile'
+          description: 可食部100gあたり
+        portions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Portion'
+        source:
+          $ref: '#/components/schemas/FoodSource'
+        createdAt:
+          type: string
+          format: date-time
+    FoodSelection:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: 食品を選ぶ前に入力した検索語
+    FoodSource:
+      type: object
+      required:
+        - datasetId
+        - reference
+      properties:
+        datasetId:
+          type: string
+        reference:
+          type: string
+          description: 食品番号, バーコード等
+    Goal:
+      type: string
+      enum:
+        - lose
+        - maintain
+        - gain
+    ImportResult:
+      type: object
+      required:
+        - foods
+        - meals
+        - weights
+        - settings
+        - skipped
+      properties:
+        foods:
+          type: integer
+          format: int32
+        meals:
+          type: integer
+          format: int32
+        weights:
+          type: integer
+          format: int32
+        settings:
+          type: integer
+          format: int32
+        skipped:
+          type: integer
+          format: int32
+    Indicators:
+      type: object
+      properties:
+        ear:
+          type: number
+          format: double
+        rda:
+          type: number
+          format: double
+        ai:
+          type: number
+          format: double
+        ul:
+          type: number
+          format: double
+        dgMin:
+          type: number
+          format: double
+        dgMax:
+          type: number
+          format: double
+    IngredientInput:
+      type: object
+      required:
+        - foodId
+        - quantity
+      properties:
+        foodId:
+          type: string
+        quantity:
+          $ref: '#/components/schemas/Quantity'
+    Level:
+      type: string
+      enum:
+        - deficient
+        - low
+        - adequate
+        - high
+        - excessive
+        - unknown
+        - none
+    MealEntry:
+      type: object
+      required:
+        - id
+        - date
+        - slot
+        - foodId
+        - foodRevisionId
+        - foodName
+        - brand
+        - source
+        - quantity
+        - grams
+        - nutrients
+        - clientRef
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        date:
+          type: string
+          format: date
+        slot:
+          $ref: '#/components/schemas/MealSlot'
+        foodId:
+          type: string
+        foodRevisionId:
+          type: string
+        foodName:
+          type: string
+        brand:
+          type: string
+        source:
+          $ref: '#/components/schemas/FoodSource'
+        quantity:
+          $ref: '#/components/schemas/Quantity'
+        grams:
+          type: number
+          format: double
+        nutrients:
+          allOf:
+            - $ref: '#/components/schemas/NutrientProfile'
+          description: grams分の栄養値
+        clientRef:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      description: 記録時点の食品情報と栄養値を保持
+    MealSlot:
+      type: string
+      enum:
+        - breakfast
+        - lunch
+        - dinner
+        - snack
+    NutrientDefinition:
+      type: object
+      required:
+        - code
+        - unit
+        - group
+      properties:
+        code:
+          type: string
+        unit:
+          $ref: '#/components/schemas/NutrientUnit'
+        group:
+          $ref: '#/components/schemas/NutrientGroup'
+    NutrientGroup:
+      type: string
+      enum:
+        - energy
+        - macro
+        - mineral
+        - vitamin
+    NutrientInput:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: double
+        status:
+          type: string
+          enum:
+            - measured
+            - estimated
+            - trace
+            - missing
+      description: 入力用の栄養値, amount省略は未計測
+    NutrientProfile:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/NutrientValue'
+      description: キーは栄養素コード, キーなしは未計測
+    NutrientStatus:
+      type: string
+      enum:
+        - measured
+        - estimated
+        - trace
+        - missing
+        - calculated
+      description: 栄養値の状態
+    NutrientTarget:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+        ear:
+          type: number
+          format: double
+        rda:
+          type: number
+          format: double
+        ai:
+          type: number
+          format: double
+        ul:
+          type: number
+          format: double
+        dgMin:
+          type: number
+          format: double
+        dgMax:
+          type: number
+          format: double
+        goal:
+          type: number
+          format: double
+          description: エネルギーの目標値
+        customMin:
+          type: number
+          format: double
+        customMax:
+          type: number
+          format: double
+    NutrientUnit:
+      type: string
+      enum:
+        - kcal
+        - g
+        - mg
+        - ug
+    NutrientValue:
+      type: object
+      required:
+        - amount
+        - status
+        - coverage
+      properties:
+        amount:
+          type: number
+          format: double
+        status:
+          $ref: '#/components/schemas/NutrientStatus'
+        coverage:
+          type: number
+          format: double
+          description: 元の重量のうち値が判明している割合(0〜1)
+    PasswordChange:
+      type: object
+      required:
+        - current
+        - next
+      properties:
+        current:
+          type: string
+        next:
+          type: string
+          minLength: 8
+    Portion:
+      type: object
+      required:
+        - unit
+        - grams
+      properties:
+        unit:
+          type: string
+        grams:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+    Problem:
+      type: object
+      required:
+        - title
+        - status
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+      description: RFC 9457 Problem Details
+    Profile:
+      type: object
+      required:
+        - sex
+        - birthDate
+        - heightCm
+        - activity
+        - goal
+        - energyAdjustKcal
+        - menstruating
+      properties:
+        sex:
+          $ref: '#/components/schemas/Sex'
+        birthDate:
+          type: string
+          format: date
+        heightCm:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+        activity:
+          $ref: '#/components/schemas/ActivityLevel'
+        goal:
+          $ref: '#/components/schemas/Goal'
+        energyAdjustKcal:
+          type: number
+          format: double
+          description: 目的に応じたエネルギー増減(kcal/日)
+        menstruating:
+          type: boolean
+          description: 鉄の基準値選択用
+    Quantity:
+      type: object
+      required:
+        - amount
+        - unit
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+        unit:
+          type: string
+          description: '"g" または食品の単位名'
+    QuickPick:
+      type: object
+      required:
+        - food
+        - quantity
+      properties:
+        food:
+          $ref: '#/components/schemas/Food'
+        quantity:
+          $ref: '#/components/schemas/Quantity'
+    QuickPicks:
+      type: object
+      required:
+        - recent
+        - frequent
+        - favorites
+        - searches
+      properties:
+        recent:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuickPick'
+        frequent:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuickPick'
+        favorites:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuickPick'
+        searches:
+          type: array
+          items:
+            type: string
+    RangeReport:
+      type: object
+      required:
+        - from
+        - to
+        - days
+        - recordedDays
+        - average
+        - averageEvaluations
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyReport'
+        recordedDays:
+          type: integer
+          format: int32
+        average:
+          $ref: '#/components/schemas/NutrientProfile'
+        averageEvaluations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evaluation'
+    Recipe:
+      type: object
+      required:
+        - food
+        - lines
+        - rawGrams
+        - cookedGrams
+        - servings
+      properties:
+        food:
+          $ref: '#/components/schemas/Food'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecipeLine'
+        rawGrams:
+          type: number
+          format: double
+        cookedGrams:
+          type: number
+          format: double
+        servings:
+          type: number
+          format: double
+    RecipeComposition:
+      type: object
+      required:
+        - lines
+        - rawGrams
+        - cookedGrams
+        - servings
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecipeLine'
+        rawGrams:
+          type: number
+          format: double
+        cookedGrams:
+          type: number
+          format: double
+        servings:
+          type: number
+          format: double
+      description: レシピの材料構成
+    RecipeInput:
+      type: object
+      required:
+        - name
+        - ingredients
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        ingredients:
+          type: array
+          items:
+            $ref: '#/components/schemas/IngredientInput'
+          minItems: 1
+        cookedGrams:
+          type: number
+          format: double
+          description: 完成重量(g), 省略時は材料重量の合計
+        servings:
+          type: number
+          format: double
+          description: 何人前, 省略時は人前単位なし
+    RecipeLine:
+      type: object
+      required:
+        - foodId
+        - revisionId
+        - name
+        - quantity
+        - grams
+      properties:
+        foodId:
+          type: string
+        revisionId:
+          type: string
+        name:
+          type: string
+        quantity:
+          $ref: '#/components/schemas/Quantity'
+        grams:
+          type: number
+          format: double
+    ReferenceInfo:
+      type: object
+      required:
+        - edition
+        - title
+        - url
+      properties:
+        edition:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+    Role:
+      type: string
+      enum:
+        - admin
+        - member
+    Settings:
+      type: object
+      required:
+        - effectiveFrom
+        - profile
+        - overrides
+      properties:
+        effectiveFrom:
+          type: string
+          format: date
+        profile:
+          $ref: '#/components/schemas/Profile'
+        overrides:
+          type: array
+          items:
+            $ref: '#/components/schemas/TargetOverride'
+    SettingsInput:
+      type: object
+      required:
+        - profile
+      properties:
+        effectiveFrom:
+          type: string
+          format: date
+          description: 省略時は当日
+        profile:
+          $ref: '#/components/schemas/Profile'
+        overrides:
+          type: array
+          items:
+            $ref: '#/components/schemas/TargetOverride'
+    Sex:
+      type: string
+      enum:
+        - male
+        - female
+    SignUpRequest:
+      type: object
+      required:
+        - loginName
+        - password
+      properties:
+        loginName:
+          type: string
+          pattern: ^[a-zA-Z0-9_.-]{3,32}$
+        password:
+          type: string
+          minLength: 8
+        displayName:
+          type: string
+    TargetOverride:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+        min:
+          type: number
+          format: double
+        max:
+          type: number
+          format: double
+    Targets:
+      type: object
+      required:
+        - edition
+        - ageBand
+        - energyKcal
+        - nutrients
+      properties:
+        edition:
+          type: string
+        ageBand:
+          type: string
+        energyKcal:
+          type: number
+          format: double
+        nutrients:
+          type: array
+          items:
+            $ref: '#/components/schemas/NutrientTarget'
+    UpdateMealEntry:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        slot:
+          $ref: '#/components/schemas/MealSlot'
+        quantity:
+          $ref: '#/components/schemas/Quantity'
+    User:
+      type: object
+      required:
+        - id
+        - displayName
+        - role
+        - createdAt
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        createdAt:
+          type: string
+          format: date-time
+    Weight:
+      type: object
+      required:
+        - date
+        - kg
+      properties:
+        date:
+          type: string
+          format: date
+        kg:
+          type: number
+          format: double
+        bodyFatPct:
+          type: number
+          format: double
+    WeightInput:
+      type: object
+      required:
+        - kg
+      properties:
+        kg:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+        bodyFatPct:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: mecalo_session
+      description: ログイン時に発行するセッションCookie
+servers:
+  - url: /api
+    description: Same origin
+    variables: {}
