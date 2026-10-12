@@ -21,7 +21,7 @@ var sourceNames = []string{
 	"topvalu", "familymart", "seven-eleven", "lawson",
 	"mcdonalds", "starbucks", "mos", "ringerhut", "ootoya", "skylark", "saizeriya",
 	"sushiro", "kurasushi", "godiva", "kourakuen", "matsunoya", "kiyoken", "cozycorner", "horai551",
-	"bigboy", "doutor", "saintmarc",
+	"dennys", "steakdon", "tonden", "burgerking", "bigboy", "doutor", "saintmarc",
 }
 
 func configureSources(cfg config, deps *app.Deps) error {
@@ -89,6 +89,14 @@ func configureSources(cfg config, deps *app.Deps) error {
 			deps.Catalogs = append(deps.Catalogs, &official.CozyCorner{Fetch: fetch})
 		case "horai551":
 			deps.Catalogs = append(deps.Catalogs, &official.Horai551{Fetch: fetch})
+		case "dennys":
+			deps.Catalogs = append(deps.Catalogs, official.Dennys(fetch))
+		case "steakdon":
+			deps.Catalogs = append(deps.Catalogs, official.SteakDon(fetch))
+		case "tonden":
+			deps.Catalogs = append(deps.Catalogs, official.Tonden(fetch))
+		case "burgerking":
+			deps.Catalogs = append(deps.Catalogs, official.BurgerKing(fetch))
 		case "bigboy":
 			deps.Catalogs = append(deps.Catalogs, &official.BigBoy{Fetch: fetch})
 		case "doutor":
