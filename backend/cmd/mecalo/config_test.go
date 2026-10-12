@@ -36,6 +36,12 @@ func TestSettingDefs(t *testing.T) {
 		t.Errorf("defaults = %+v", c)
 	}
 
+	t.Setenv("MECALO_TIMEZONE", "")
+	t.Setenv("MECALO_SYNC_INTERVAL", "24h")
+	if env := settingEnv(settingDefs()); len(env) != 1 || env["MECALO_SYNC_INTERVAL"] != "24h" {
+		t.Errorf("env = %v", env)
+	}
+
 	values["MECALO_AUTH_PROVIDERS"] = "oidc"
 	if _, err := parseConfig(values); err == nil {
 		t.Error("oidc without issuer accepted")

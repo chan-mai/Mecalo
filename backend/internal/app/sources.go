@@ -360,8 +360,10 @@ func (s *Sources) StartSyncAll(ctx context.Context, actor user.User) error {
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 		for _, id := range ids {
-			_, _ = s.sync(ctx, id)
-			s.running.Delete(id)
+			func() {
+				defer s.running.Delete(id)
+				_, _ = s.sync(ctx, id)
+			}()
 		}
 	}()
 	return nil

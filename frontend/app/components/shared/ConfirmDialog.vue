@@ -23,8 +23,16 @@ function onCancel(event: Event) {
 	emit('cancel');
 }
 
+// 文字選択のドラッグを除外
+let downOnBackdrop = false;
+
+function onMouseDown(event: MouseEvent) {
+	downOnBackdrop = event.target === dialog.value;
+}
+
 function onClick(event: MouseEvent) {
-	if (event.target === dialog.value) emit('cancel');
+	if (downOnBackdrop && event.target === dialog.value) emit('cancel');
+	downOnBackdrop = false;
 }
 </script>
 
@@ -37,6 +45,7 @@ function onClick(event: MouseEvent) {
 		:aria-labelledby="titleId"
 		:aria-describedby="message ? messageId : undefined"
 		@cancel="onCancel"
+		@mousedown="onMouseDown"
 		@click="onClick"
 	>
 		<h2 :id="titleId" class="font-semibold">{{ title }}</h2>

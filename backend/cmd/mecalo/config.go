@@ -79,7 +79,7 @@ func settingDefs() []app.SettingDef {
 func settingEnv(defs []app.SettingDef) map[string]string {
 	out := map[string]string{}
 	for _, d := range defs {
-		if v, ok := os.LookupEnv(d.Key); ok {
+		if v := os.Getenv(d.Key); v != "" {
 			out[d.Key] = v
 		}
 	}

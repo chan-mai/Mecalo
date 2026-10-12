@@ -17,7 +17,7 @@ const profile = useValidation(profileUpdateSchema);
 const reset = useValidation(passwordResetSchema);
 
 const id = computed(() => String(route.params.id));
-const { data: target } = useAsyncData(`admin-user-${id.value}`, () => unwrap(api.GET('/admin/users/{id}', { params: { path: { id: id.value } } })));
+const { data: target } = useAsyncData(() => `admin-user-${id.value}`, () => unwrap(api.GET('/admin/users/{id}', { params: { path: { id: id.value } } })));
 
 const form = reactive<{ displayName: string; loginName: string; role: Schemas['Role'] }>({ displayName: '', loginName: '', role: 'member' });
 const password = ref('');
