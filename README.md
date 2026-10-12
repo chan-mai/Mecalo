@@ -54,7 +54,27 @@ Mecalo = meal(memory) + calorie
 | `MECALO_OIDC_REDIRECT_URL` | なし | `https://<host>/api/auth/oidc/callback` |
 | `MECALO_OIDC_NAME` | `OpenID Connect` | ログイン画面の表示名 |
 | `MECALO_OIDC_AUTO_PROVISION` | `false` | 未登録のOIDC利用者を自動作成するか |
-| `MECALO_OPENFOODFACTS_LOOKUP` | `false` | 未登録バーコードをOpen Food Factsへ照会するか |
+| `MECALO_OPENFOODFACTS_LOOKUP` | `false` | 未登録バーコードをOpen Food Factsへ照会するか(`MECALO_SOURCES`の`openfoodfacts`と同様) |
+| `MECALO_SOURCES` | なし | 有効にする外部取得元をカンマ区切りで指定(下表参照), `all`ですべて |
+| `MECALO_TABECAL_KEY` | なし | タベカルのAPIキー, 空はキー不要の範囲に限り利用可能 |
+| `MECALO_SYNC_INTERVAL` | `168h` | 一覧同期の間隔, `0`で自動同期なし |
+| `MECALO_FETCH_USER_AGENT` | `Mecalo-Agent/v<バージョン> (https://github.com/chan-mai/Mecalo)` | 外部サイト・APIへ送るUser-Agent, robots.txtは`/`より前の製品名で照合 |
+
+`MECALO_SOURCES`に指定できる取得元
+
+| 名前 | 種類 | 内容 |
+|---|---|---|
+| `openfoodfacts` | バーコード照会 | 未登録バーコードをOpen Food Factsへ照会 |
+| `openfoodfacts-delta` | 一覧の同期 | Open Food Factsの日次差分から日本の商品を取込(初回は`import off`で全量取込) |
+| `tabecal` | 外部検索 | タベカル(外食・中食チェーンの公式公表値) |
+| `topvalu`, `familymart`, `seven-eleven`, `lawson` | 一覧の同期 | 小売・コンビニ公式サイトの商品と栄養成分 |
+| `mcdonalds`, `starbucks`, `mos`, `ringerhut`, `ootoya`, `skylark`, `saizeriya` | 一覧の同期 | 外食チェーン公式サイトの栄養成分一覧(`skylark`はガスト・バーミヤン等の各ブランド, `skylark`と`saizeriya`はエネルギーと食塩相当量のみ, `ootoya`は代表店舗の値) |
+| `sushiro`, `kurasushi`, `godiva` | 一覧の同期 | スシロー(地域ごとの代表店舗), くら寿司, ゴディバのドリンク(いずれもエネルギーのみ) |
+| `kourakuen`, `matsunoya`, `kiyoken`, `cozycorner`, `horai551`, `bigboy`, `doutor`, `saintmarc` | 一覧の同期 | 幸楽苑, 松のや, 崎陽軒, 銀座コージーコーナー, 551蓬莱, ビッグボーイ, ドトール・エクセルシオール, サンマルクカフェ・倉式珈琲店 |
+| `dennys`, `steakdon`, `tonden`, `burgerking` | 一覧の同期 | 栄養成分表のPDFを読み取り(デニーズ, ステーキのどん, とんでん, バーガーキング) |
+
+> [!IMPORTANT]
+> 各サイトの利用規約は私的使用の範囲を超える複製を禁止しているため、有効にする前に利用規約を確認し、取得したデータはインスタンスの利用者の範囲で利用してください
 
 
 ### 管理コマンド
@@ -63,6 +83,7 @@ Mecalo = meal(memory) + calorie
 mecalo serve
 mecalo import mext [-file本表.xlsx]
 mecalo import off -file openfoodfacts-products.jsonl.gz [-country japan]
+mecalo sync [topvalu familymart ...]   # MECALO_SOURCESで有効な一覧の同期
 MECALO_NEW_PASSWORD=... mecalo user create -login alice -admin
 mecalo backup -out backup.db
 mecalo export -login alice > alice.json

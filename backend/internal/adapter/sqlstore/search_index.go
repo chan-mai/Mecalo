@@ -13,20 +13,69 @@ import (
 )
 
 // 検索キーの生成規則を変えたら上げる
-const searchIndexVersion = "2"
+const searchIndexVersion = "4"
 
 type indexer struct {
 	reader port.TextReader
 }
 
-// 表記の検索キーと読みの検索キー
-func (x indexer) keys(name, brand string, aliases []string) (string, string) {
-	key := food.SearchKey(strings.Join(append([]string{name, brand}, aliases...), " "))
-	if x.reader == nil {
-		return key, ""
+type searchKeys struct {
+	// 表記と読み
+	key, reading string
+	// 語の区切りの空白を除いた表記と読み, 名前・ブランド・別名の間のみ空白
+	compact, compactReading string
+	// 項目ごとの表記と読みの2文字の組
+	grams []string
+}
+
+func (x indexer) keys(name, brand string, aliases []string) searchKeys {
+	all := append([]string{name, brand}, aliases...)
+	k := searchKeys{key: food.SearchKey(strings.Join(all, " "))}
+	k.compact = compactJoin(all, food.SearchKey)
+	fields := make([]string, 0, len(all)*2)
+	for _, f := range all {
+		fields = append(fields, food.SearchKey(f))
 	}
-	reading := food.SearchKey(x.reader.Reading(strings.Join(append([]string{name}, aliases...), " ")))
-	return key, reading
+	if x.reader != nil {
+		readable := append([]string{name}, aliases...)
+		k.reading = food.SearchKey(x.reader.Reading(strings.Join(readable, " ")))
+		k.compactReading = compactJoin(readable, func(s string) string { return food.SearchKey(x.reader.Reading(s)) })
+		for _, f := range readable {
+			fields = append(fields, food.SearchKey(x.reader.Reading(f)))
+		}
+	}
+	k.grams = food.BigramsOf(fields...)
+	return k
+}
+
+// 1文で挿入する組の数
+const gramBatch = 400
+
+// リビジョンの組を一括挿入
+func insertGrams(ctx context.Context, q conn, revision string, grams []string) error {
+	for start := 0; start < len(grams); start += gramBatch {
+		batch := grams[start:min(start+gramBatch, len(grams))]
+		args := make([]any, 0, len(batch)*2)
+		for _, g := range batch {
+			args = append(args, g, revision)
+		}
+		values := strings.TrimSuffix(strings.Repeat("(?, ?), ", len(batch)), ", ")
+		if _, err := q.exec(ctx, "INSERT INTO food_search_grams (gram, revision_id) VALUES "+values+" ON CONFLICT DO NOTHING", args...); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// 項目ごとに空白を除いて空白で連結
+func compactJoin(parts []string, key func(string) string) string {
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if c := strings.ReplaceAll(key(p), " ", ""); c != "" {
+			out = append(out, c)
+		}
+	}
+	return strings.Join(out, " ")
 }
 
 func (x indexer) version() string {
@@ -73,17 +122,27 @@ func (s *Store) reindex(ctx context.Context) error {
 	type row struct {
 		id, name, brand string
 		aliases         []string
+		current         bool
 	}
 	var rows []row
-	err = s.q.each(ctx, "SELECT id, name, brand, aliases FROM food_revisions", nil, func(r *sql.Rows) error {
-		var x row
-		if err := r.Scan(&x.id, &x.name, &x.brand, aliasesCol{&x.aliases}); err != nil {
+	err = s.q.each(ctx, `
+		SELECT r.id, r.name, r.brand, r.aliases, CASE WHEN f.current_revision_id = r.id THEN 1 ELSE 0 END
+		FROM food_revisions r JOIN foods f ON f.id = r.food_id`, nil, func(r *sql.Rows) error {
+		var (
+			x       row
+			current int
+		)
+		if err := r.Scan(&x.id, &x.name, &x.brand, aliasesCol{&x.aliases}, &current); err != nil {
 			return err
 		}
+		x.current = current == 1
 		rows = append(rows, x)
 		return nil
 	})
 	if err != nil {
+		return err
+	}
+	if _, err := s.q.exec(ctx, "DELETE FROM food_search_grams"); err != nil {
 		return err
 	}
 	for start := 0; start < len(rows); start += chunkSize {
@@ -94,10 +153,18 @@ func (s *Store) reindex(ctx context.Context) error {
 		}
 		c := conn{db: tx, d: s.d}
 		for _, x := range batch {
-			key, reading := s.idx.keys(x.name, x.brand, x.aliases)
-			if _, err := c.exec(ctx, "UPDATE food_revisions SET search_key = ?, reading_key = ? WHERE id = ?", key, reading, x.id); err != nil {
+			k := s.idx.keys(x.name, x.brand, x.aliases)
+			if _, err := c.exec(ctx,
+				"UPDATE food_revisions SET search_key = ?, reading_key = ?, compact_key = ?, compact_reading = ?, gram_count = ? WHERE id = ?",
+				k.key, k.reading, k.compact, k.compactReading, len(k.grams), x.id); err != nil {
 				_ = tx.Rollback()
 				return err
+			}
+			if x.current {
+				if err := insertGrams(ctx, c, x.id, k.grams); err != nil {
+					_ = tx.Rollback()
+					return err
+				}
 			}
 		}
 		if err := tx.Commit(); err != nil {

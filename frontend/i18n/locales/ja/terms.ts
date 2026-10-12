@@ -70,6 +70,7 @@ export default {
 	quantity: '量',
 	unit: '単位',
 	per100g: '100gあたり',
+	perBasis: '{unit}あたり',
 	date: '日付',
 	mealSlot: '区分',
 	foodName: '食品名',

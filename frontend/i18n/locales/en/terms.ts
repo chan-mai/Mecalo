@@ -72,6 +72,7 @@ export default {
 	quantity: 'Amount',
 	unit: 'Unit',
 	per100g: 'per 100 g',
+	perBasis: 'per {unit}',
 	date: 'Date',
 	mealSlot: 'Meal',
 	foodName: 'Name',

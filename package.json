@@ -7,6 +7,7 @@
   },
   "packageManager": "pnpm@10.17.1",
   "scripts": {
+    "dev": "concurrently -k -n backend,frontend -c blue,magenta \"pnpm --filter @mecalo/backend dev\" \"pnpm --filter @mecalo/frontend dev\"",
     "gen": "pnpm --filter @mecalo/api run build && pnpm --filter @mecalo/frontend run gen:api",
     "lint": "pnpm --filter @mecalo/frontend run lint",
     "typecheck": "pnpm --filter @mecalo/frontend run typecheck",
@@ -17,5 +18,8 @@
       "@parcel/watcher",
       "esbuild"
     ]
+  },
+  "devDependencies": {
+    "concurrently": "10.0.5"
   }
 }

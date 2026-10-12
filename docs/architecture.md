@@ -41,7 +41,11 @@ internal/domain/*    純粋ロジック
 | `adapter/httpapi` | 生成型と app 型の変換, 認証・CSRF・CORS |
 | `adapter/sqlstore` | 両DB共通の SQL 実装。方言差分は `dialect.go` のみ |
 | `adapter/dri` | 食事摂取基準 YAML の読込 |
-| `adapter/mext`, `adapter/openfoodfacts` | 外部データの変換 |
+| `adapter/foodsource/mext`, `adapter/foodsource/openfoodfacts` | 外部データの変換 |
+| `adapter/foodsource/tabecal` | 外部検索(タベカル) |
+| `adapter/foodsource/official` | 公式サイトの商品一覧の同期。取得元は`registry.go`へ登録し、商品ページの巡回は`detail.go`の共通処理を利用 |
+| `adapter/foodsource/extract` | 栄養成分表示・HTML・PDFの表の解析の共通部品 |
+| `adapter/foodsource/webfetch` | 外部サイト取得の共通処理(robots.txt, 間隔制御, 条件付きGET) |
 
 ## フロントエンドの構成
 
@@ -94,6 +98,33 @@ internal/domain/*    純粋ロジック
 2. 記録時に栄養値をスナップショットとして`meal_entry_nutrients`へ保存。集計はこのスナップショットのみ、食品テーブルを参照しない
 
 
+## 外部取得元
+
+取得元は`port/sources.go`の3種類に分離しておき、`MECALO_SOURCES`で有効化する
+
+| 種類 | port | 実行契機 | 保存 |
+|---|---|---|---|
+| バーコード照会 | `ProductLookup` | 未登録バーコードの読取時 | 照会した商品のみ |
+| 外部検索 | `FoodFinder` | 利用者の「外部のデータも検索」操作時のみに限定 | 応答は`source_cache`に1日, 選択商品のみ食品として保存 |
+
+- タベカルは取得元側の部分一致に加え、チェーン一覧(1日1回取得)と検索語をbigram照合、近似するチェーンがあればチェーン内を検索を行う
+| 一覧の同期 | `Catalog` | `mecalo sync`, `serve`内の定期実行(`MECALO_SYNC_INTERVAL`) | 全商品を食品として保存 |
+
+- 食品IDは`<取得元>-<取得元の識別子>`, JANは`food.NormalizeBarcode`で正規化
+- 取得元の識別子が同じ既存食品(旧形式IDを含む)は同一食品として新リビジョンを追加
+- 地域で値が異なる取得元は全地域分を取得し、全地域で同じ値は1件, 異なる値は値ごとに商品名へ地域を併記(例: `紅しゃけ(北海道・東北)`)
+- 一覧に2回続けて現れない食品は販売終了(`discontinued_at`)として検索から除外すること。記録はスナップショットのため影響なし
+- 外部サイトの取得は1回120秒まで, 接続失敗・タイムアウト・5xx・429は間隔を空けて3回まで試行。それでも取得できない商品は読み飛ばし、登録済みなら販売終了の判定から除外して前回の内容を維持
+- 詳細ページの再取得は30日ごと, それ以外は一覧での存在確認のみ(`source_items.fetched_at`)
+- 一覧ページは条件付きGETで変更を判定, 全ページ変更なしの場合は取込と販売終了判定を省略
+- 検索結果はJAN、ブランドと名前が同じ食品を1件にまとめ、 利用者の登録 > 公式サイト > タベカル > 成分表 > Open Food Factsの優先順で代表を選択
+
+## 栄養値の基準量
+
+- 栄養値は既定で可食部100gあたり。`Revision.Basis`指定時はその1単位(1個, 1食等)あたり
+- 外食等で1単位の重量が公表されていない場合は重量0で保存し、記録はその単位でのみ可能
+- 重量不明の記録は充足率の重み付けに、たんぱく質・脂質・炭水化物・食塩相当量の合計重量を利用する
+
 ## 食品検索
 
 - 食品名はNFKC正規化, カタカナのひらがな化, 小文字化した検索キーで部分一致検索。語の区切りは空白1つとして保持します
@@ -133,6 +164,7 @@ internal/domain/*    純粋ロジック
 
 - `mecalo import mext`: 成分表Excelの取得
 - `MECALO_OPENFOODFACTS_LOOKUP=true`: 未登録バーコードの照会
+- `MECALO_SOURCES`: 外部検索, 一覧の同期(上記「外部取得元」)
 - `MECALO_AUTH_PROVIDERS`に`oidc`を含める場合: OIDCプロバイダとの通信
 
 LLM連携等を追加する場合も`port`にインタフェースを定義、設定でオプトインする形にしたい

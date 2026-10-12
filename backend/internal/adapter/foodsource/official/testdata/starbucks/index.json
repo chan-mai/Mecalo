@@ -1,0 +1,7 @@
+{"STARBUCKS":{"beverage":{"kbn_1":{"categories":{"c01":{"menu_groups":[
+{"url_jan_code":"4500000000001","product_name_ja":"テスト ラテ&reg;","nutrition_by_milk":{
+ "TALL":[{"_milk_type":"milk","calory":223.4,"protein":11.2,"lipid":11.9,"carbohydrate":17.6,"salt_eq":0.4,"sodium":"-"},{"_milk_type":"soy","calory":150}],
+ "GRANDE":[{"_milk_type":"soy","calory":200}]}}]}}}},
+ "food":{"kbn_1":{"categories":{"c01":{"menu_groups":[
+{"url_jan_code":"4500000000002","product_name_ja":"テスト スコーン","nutrition_by_milk":{"STANDARD":[{"_milk_type":null,"calory":342,"protein":4.5,"salt_eq":0.7}]}}]}}}}},
+"ONLINE_STORE":{"beverage":[],"food":[]}}

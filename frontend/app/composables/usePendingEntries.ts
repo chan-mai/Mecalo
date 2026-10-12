@@ -18,7 +18,7 @@ export function usePendingEntries(date: Ref<string>) {
 			foodRevisionId: '',
 			foodName: op.preview.foodName,
 			brand: '',
-			source: { datasetId: '', reference: '' },
+			source: { datasetId: '', reference: '', url: '' },
 			quantity: op.body.quantity,
 			grams: op.preview.grams ?? 0,
 			nutrients,

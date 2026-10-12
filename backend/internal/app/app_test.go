@@ -120,18 +120,28 @@ var jst = time.FixedZone("JST", 9*60*60)
 
 func newEnv(t *testing.T, s port.Store) *env {
 	t.Helper()
+	return newEnvWith(t, s, nil)
+}
+
+// 外部取得元等の依存を追加
+func newEnvWith(t *testing.T, s port.Store, opt func(*app.Deps)) *env {
+	t.Helper()
 	ref, err := dri.Load(data.DRI2025)
 	if err != nil {
 		t.Fatal(err)
 	}
-	a := app.New(app.Deps{
+	deps := app.Deps{
 		Store:     s,
 		Reader:    sharedReader,
 		Clock:     &fixedClock{now: time.Date(2026, 10, 12, 8, 0, 0, 0, jst)},
 		IDs:       system.UUIDs{},
 		Reference: ref,
 		Hasher:    password.Fast(),
-	}, app.Options{RegistrationOpen: true})
+	}
+	if opt != nil {
+		opt(&deps)
+	}
+	a := app.New(deps, app.Options{RegistrationOpen: true})
 	e := &env{app: a, store: s, ctx: context.Background()}
 
 	sess, err := a.Accounts.Setup(e.ctx, app.SignUpInput{LoginName: "alice", Password: "password-a"})

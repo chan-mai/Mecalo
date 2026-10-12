@@ -59,7 +59,12 @@ const links = computed(() => [
 	{ to: '/settings/data', label: 'pages.settings.links.data' },
 	{ to: '/settings/password', label: 'pages.settings.links.password' },
 	{ to: '/about', label: 'pages.settings.links.about' },
-	...(me.value?.role === 'admin' ? [{ to: '/admin/users', label: 'pages.settings.links.users' }] : []),
+	...(me.value?.role === 'admin'
+		? [
+			{ to: '/admin/users', label: 'pages.settings.links.users' },
+			{ to: '/admin/sources', label: 'pages.settings.links.sources' },
+		]
+		: []),
 ]);
 
 function placeholder(code: string, side: 'min' | 'max'): string {

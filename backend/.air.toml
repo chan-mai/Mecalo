@@ -1,0 +1,19 @@
+# go tool airでの開発時の再ビルド・再起動
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/mecalo ./cmd/mecalo"
+entrypoint = ["./tmp/mecalo", "serve"]
+include_ext = ["go", "sql", "yaml"]
+exclude_dir = ["tmp", "bin", "data"]
+exclude_regex = ["_test\\.go$"]
+delay = 500
+kill_delay = "2s"
+send_interrupt = true
+
+[log]
+main_only = true
+
+[misc]
+clean_on_exit = true

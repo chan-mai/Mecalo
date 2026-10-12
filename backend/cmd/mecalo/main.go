@@ -13,21 +13,23 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/chan-mai/mecalo/backend/data"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/dri"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/mext"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/openfoodfacts"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/httpapi"
-	"github.com/chan-mai/mecalo/backend/internal/adapter/mext"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/oidc"
-	"github.com/chan-mai/mecalo/backend/internal/adapter/openfoodfacts"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/password"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/reading"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/sqlstore"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/system"
 	"github.com/chan-mai/mecalo/backend/internal/app"
+	"github.com/chan-mai/mecalo/backend/internal/domain/food"
 	"github.com/chan-mai/mecalo/backend/internal/domain/user"
 )
 
@@ -37,6 +39,7 @@ Commands:
   serve                         Start the API server
   import mext [-file path]      Import the Standard Tables of Food Composition in Japan
   import off -file dump.jsonl   Import Open Food Facts products from a JSONL dump
+  sync [source...]              Sync catalog sources enabled in MECALO_SOURCES
   user create -login name       Create a local user (-admin for administrator)
   backup -out path              Write an online SQLite backup
   export -login name            Write a user's data as JSON to stdout
@@ -84,6 +87,8 @@ func run(args []string) error {
 			return errors.New("usage: mecalo user create -login name")
 		}
 		return createUser(ctx, cfg, args[2:])
+	case "sync":
+		return syncCommand(ctx, cfg, args[1:])
 	case "backup":
 		return backup(ctx, cfg, args[1:])
 	case "export":
@@ -119,8 +124,10 @@ func open(ctx context.Context, cfg config) (*runtime, error) {
 		Reference: ref,
 		Hasher:    password.Default(),
 	}
-	if cfg.OFFLookup {
-		deps.Barcode = openfoodfacts.NewClient(cfg.OFFBaseURL)
+	deps.OnSync = logSync
+	if err := configureSources(cfg, &deps); err != nil {
+		store.Close()
+		return nil, err
 	}
 	a := app.New(deps, app.Options{RegistrationOpen: cfg.Registration(), OIDCAutoProvision: cfg.OIDCAutoCreate})
 	return &runtime{app: a, store: store}, nil
@@ -174,6 +181,9 @@ func serve(ctx context.Context, cfg config) error {
 		MaxHeaderBytes:    1 << 20,
 	}
 	go purgeSessions(ctx, rt.app)
+	if cfg.SyncInterval > 0 {
+		go syncSources(ctx, rt.app, cfg.SyncInterval)
+	}
 
 	errc := make(chan error, 1)
 	go func() {
@@ -203,6 +213,68 @@ func purgeSessions(ctx context.Context, a *app.App) {
 		case <-t.C:
 		}
 	}
+}
+
+// 間隔の過ぎた取得元を1時間ごとに確認
+func syncSources(ctx context.Context, a *app.App, interval time.Duration) {
+	t := time.NewTicker(time.Hour)
+	defer t.Stop()
+	for {
+		if err := a.Sources.SyncDue(ctx, interval); err != nil && ctx.Err() == nil {
+			slog.Warn("sync sources", "error", err)
+		}
+		if err := a.Sources.PurgeCache(ctx); err != nil && ctx.Err() == nil {
+			slog.Warn("purge source cache", "error", err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
+}
+
+func logSync(e app.SyncEvent) {
+	attrs := []any{"source", e.Source}
+	switch e.Phase {
+	case app.SyncStarted:
+		slog.Info("sync started", attrs...)
+	case app.SyncProgress:
+		slog.Info("sync progress", append(attrs, "items", e.Items, "created", e.Result.Created, "updated", e.Result.Updated)...)
+	case app.SyncFinished:
+		r := e.Result
+		slog.Info("sync finished", append(attrs, "items", e.Items, "created", r.Created, "updated", r.Updated, "unchanged", r.Unchanged,
+			"skipped", r.Skipped, "failed", r.Failed, "discontinued", r.Discontinued, "not_modified", r.NotModified)...)
+	case app.SyncFailed:
+		slog.Warn("sync failed", append(attrs, "items", e.Items, "error", e.Err)...)
+	}
+}
+
+func syncCommand(ctx context.Context, cfg config, args []string) error {
+	rt, err := open(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	defer rt.store.Close()
+	list, err := rt.app.Sources.List(ctx)
+	if err != nil {
+		return err
+	}
+	var targets []food.DatasetID
+	for _, s := range list {
+		if s.Kind == app.SourceCatalog && (len(args) == 0 || slices.Contains(args, string(s.Dataset.ID))) {
+			targets = append(targets, s.Dataset.ID)
+		}
+	}
+	if len(targets) == 0 {
+		return errors.New("no matching catalog sources; enable them with MECALO_SOURCES")
+	}
+	for _, id := range targets {
+		if _, err := rt.app.Sources.Sync(ctx, id); err != nil {
+			return fmt.Errorf("%s: %w", id, err)
+		}
+	}
+	return nil
 }
 
 func importMEXT(ctx context.Context, cfg config, args []string) error {

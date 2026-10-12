@@ -28,6 +28,7 @@ export default {
 		links: {
 			about: 'Data sources and licenses',
 			users: 'Manage users',
+			sources: 'External data sources',
 			weight: 'Weight trend',
 			data: 'Export and import',
 			password: 'Change password',
@@ -56,6 +57,20 @@ export default {
 		software: 'Software',
 		license: 'Mecalo is released under AGPL-3.0',
 		offAttribution: 'Open Food Facts data is available under the ODbL',
+	},
+	adminSources: {
+		title: 'External data sources',
+		note: 'Sources are enabled with the MECALO_SOURCES environment variable. Check each site\'s terms before syncing official sites, and keep the data within the users of this instance',
+		empty: 'No sources are enabled',
+		sync: 'Sync',
+		started: 'Started syncing {name}',
+		running: 'Syncing',
+		syncedAt: 'Synced {date}, {items} items',
+		kind: {
+			lookup: 'Barcode lookup',
+			finder: 'External search',
+			catalog: 'Catalog sync',
+		},
 	},
 	admin: {
 		title: 'Users',

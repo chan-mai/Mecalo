@@ -93,7 +93,7 @@ func NewEntry(in NewEntryInput, rev food.Revision) (Entry, error) {
 
 // 指定リビジョンと数量でスナップショットを再生成
 func (e Entry) Resolve(rev food.Revision, q food.Quantity, now time.Time) (Entry, error) {
-	grams, err := rev.Grams(q)
+	grams, values, err := rev.Amounts(q)
 	if err != nil {
 		return Entry{}, err
 	}
@@ -104,7 +104,7 @@ func (e Entry) Resolve(rev food.Revision, q food.Quantity, now time.Time) (Entry
 	e.Source = rev.Source
 	e.Quantity = q
 	e.Grams = grams
-	e.Nutrients = rev.Nutrients.ForGrams(grams)
+	e.Nutrients = values
 	e.UpdatedAt = now
 	return e, nil
 }
@@ -124,5 +124,9 @@ func (e Entry) Duplicate(id ID, date calendar.Date, slot Slot, now time.Time) (E
 }
 
 func (e Entry) part() nutrient.Part {
-	return nutrient.Part{Grams: e.Grams, Values: e.Nutrients}
+	grams := e.Grams
+	if grams.IsZero() {
+		grams = nutrient.MacroMass(e.Nutrients)
+	}
+	return nutrient.Part{Grams: grams, Values: e.Nutrients}
 }

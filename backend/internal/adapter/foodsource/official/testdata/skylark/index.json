@@ -1,0 +1,6 @@
+{"list":[
+{"menu_uid":"1_100","menu_name":"テストハンバーグ","valiation":[{"name":"","calorie":"709","salt":"2.4","sugar":""}]},
+{"menu_uid":"1_100","menu_name":"テストハンバーグ","valiation":[{"name":"","calorie":"709","salt":"2.4","sugar":""}]},
+{"menu_uid":"1_200","menu_name":"テストドリンクバー","valiation":[{"name":"","calorie":"","salt":""},{"name":"単品","calorie":"","salt":""}]},
+{"menu_uid":"1_300","menu_name":"テストパスタ","valiation":[{"name":"レギュラー","calorie":"600","salt":"3.0"},{"name":"大盛","calorie":"800","salt":"4.0"}]}
+]}

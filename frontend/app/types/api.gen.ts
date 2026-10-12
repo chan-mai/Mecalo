@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/admin/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 有効な外部取得元と同期状態 */
+        get: operations["AdminSourcesApi_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/sources/{id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 商品一覧の同期を開始 */
+        post: operations["AdminSourcesApi_sync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/users": {
         parameters: {
             query?: never;
@@ -260,6 +294,24 @@ export interface paths {
         get: operations["FoodsApi_getByBarcode"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/foods/external": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 外部取得元の名前検索, 利用者の操作時のみ */
+        get: operations["FoodsApi_searchExternal"];
+        put?: never;
+        /** @description 外部検索の結果をシステム食品として保存 */
+        post: operations["FoodsApi_saveExternal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -736,6 +788,16 @@ export interface components {
             /** @description ログイン画面に表示するOIDCプロバイダ名 */
             oidcName?: string;
         };
+        /** @description 栄養値の基準量, 省略は可食部100g */
+        Basis: {
+            /** @description 1個, 1食等 */
+            unit: string;
+            /**
+             * Format: double
+             * @description 1単位の重量(g), 省略は不明
+             */
+            grams?: number;
+        };
         CopyMeals: {
             /** Format: date */
             fromDate: string;
@@ -831,6 +893,31 @@ export interface components {
                 [key: string]: components["schemas"]["RecipeComposition"];
             };
         };
+        /** @description 外部取得元の検索結果1件, 未保存 */
+        ExternalFood: {
+            datasetId: string;
+            /** @description 取得元の表示名 */
+            datasetName: string;
+            reference: string;
+            name: string;
+            brand: string;
+            nutrients: components["schemas"]["NutrientProfile"];
+            basis?: components["schemas"]["Basis"];
+            portions: components["schemas"]["Portion"][];
+            /** @description 保存済みの場合の食品ID */
+            savedId?: string;
+        };
+        ExternalFoodSelection: {
+            datasetId: string;
+            reference: string;
+        };
+        ExternalSearchResult: {
+            foods: components["schemas"]["ExternalFood"][];
+            /** @description 取得できなかった取得元 */
+            failed: string[];
+            /** @description 結果に含まれる取得元の帰属表示 */
+            attributions: string[];
+        };
         Food: {
             id: string;
             kind: components["schemas"]["FoodKind"];
@@ -839,6 +926,8 @@ export interface components {
             editable: boolean;
             favorite: boolean;
             deleted: boolean;
+            /** @description 取得元の一覧から消えた食品, 検索対象外 */
+            discontinued: boolean;
             revision: components["schemas"]["FoodRevision"];
         };
         FoodInput: {
@@ -850,6 +939,7 @@ export interface components {
             nutrients: {
                 [key: string]: components["schemas"]["NutrientInput"];
             };
+            basis?: components["schemas"]["Basis"];
             portions?: components["schemas"]["Portion"][];
         };
         /** @enum {string} */
@@ -862,8 +952,9 @@ export interface components {
             brand: string;
             /** @description 検索対象の別名 */
             aliases: string[];
-            /** @description 可食部100gあたり */
+            /** @description 可食部100gあたり, basis指定時はその1単位あたり */
             nutrients: components["schemas"]["NutrientProfile"];
+            basis?: components["schemas"]["Basis"];
             portions: components["schemas"]["Portion"][];
             source: components["schemas"]["FoodSource"];
             /** Format: date-time */
@@ -877,6 +968,13 @@ export interface components {
             datasetId: string;
             /** @description 食品番号, バーコード等 */
             reference: string;
+            /** @description 取得元ページ, 空は取込元全体 */
+            url: string;
+            /**
+             * Format: date-time
+             * @description 取得日時
+             */
+            retrievedAt?: string;
         };
         /** @enum {string} */
         Goal: "lose" | "maintain" | "gain";
@@ -1126,6 +1224,23 @@ export interface components {
             password: string;
             displayName?: string;
         };
+        Source: {
+            dataset: components["schemas"]["Dataset"];
+            kind: components["schemas"]["SourceKind"];
+            /** Format: date-time */
+            syncedAt?: string;
+            /** @description 直近の同期の失敗内容, 空は成功 */
+            error: string;
+            /**
+             * Format: int32
+             * @description 直近の同期で確認した商品数
+             */
+            items: number;
+            /** @description 同期中 */
+            running: boolean;
+        };
+        /** @enum {string} */
+        SourceKind: "lookup" | "finder" | "catalog";
         TargetOverride: {
             code: string;
             /** Format: double */
@@ -1176,6 +1291,127 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    AdminSourcesApi_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Source"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    AdminSourcesApi_sync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has been accepted for processing, but processing has not yet completed. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request conflicts with the current state of the server. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     AdminApi_list: {
         parameters: {
             query?: never;
@@ -2071,6 +2307,124 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Food"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    FoodsApi_searchExternal: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExternalSearchResult"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    FoodsApi_saveExternal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExternalFoodSelection"];
+            };
+        };
         responses: {
             /** @description The request has succeeded. */
             200: {

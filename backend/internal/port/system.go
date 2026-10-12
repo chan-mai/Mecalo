@@ -1,11 +1,6 @@
 package port
 
-import (
-	"context"
-	"time"
-
-	"github.com/chan-mai/mecalo/backend/internal/domain/food"
-)
+import "time"
 
 type Clock interface {
 	Now() time.Time
@@ -13,17 +8,6 @@ type Clock interface {
 
 type IDGenerator interface {
 	NewID() string
-}
-
-// バーコードからの外部食品照会
-type BarcodeLookup interface {
-	Lookup(ctx context.Context, barcode string) (ExternalProduct, error)
-	Dataset() food.Dataset
-}
-
-type ExternalProduct struct {
-	Barcode  string
-	Revision food.Revision
 }
 
 type PasswordHasher interface {

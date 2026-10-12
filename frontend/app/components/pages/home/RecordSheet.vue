@@ -2,7 +2,7 @@
 import { toast } from 'vue-sonner';
 import type { Schemas } from '~/composables/api/client';
 import { newClientRef, slots } from '~/utils/meals';
-import { defaultQuantity, gramsOf } from '~/utils/quantity';
+import { defaultQuantity, gramsOf, nutrientsOf } from '~/utils/quantity';
 
 const props = defineProps<{ shown: boolean; date: string; initialSlot: Schemas['MealSlot'] }>();
 const emit = defineEmits<{ closed: []; recorded: [] }>();
@@ -25,14 +25,14 @@ async function record(food: Schemas['Food'], quantity: Schemas['Quantity']) {
 	busy.value = true;
 	try {
 		const grams = gramsOf(food.revision, quantity);
-		const energy = food.revision.nutrients.energy;
+		const energy = nutrientsOf(food.revision, quantity)?.energy;
 		const res = await outbox.run({
 			kind: 'addMeal',
 			body: { date: props.date, slot: slot.value, foodId: food.id, quantity, clientRef: newClientRef() },
 			preview: {
 				foodName: food.revision.name,
 				grams,
-				kcal: energy && grams !== undefined ? energy.amount * grams / 100 : undefined,
+				kcal: energy?.amount,
 			},
 		});
 		toast(res.queued ? t('common.messages.savedOffline') : t('pages.home.recordSheet.added', { name: food.revision.name }));

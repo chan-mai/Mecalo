@@ -128,7 +128,59 @@ func (s *server) AdminApiDelete(ctx context.Context, req gen.AdminApiDeleteReque
 	return gen.AdminApiDelete204Response{}, nil
 }
 
+func (s *server) AdminSourcesApiList(ctx context.Context, _ gen.AdminSourcesApiListRequestObject) (gen.AdminSourcesApiListResponseObject, error) {
+	list, err := s.app.Sources.ListFor(ctx, currentUser(ctx))
+	if err != nil {
+		return nil, err
+	}
+	out := gen.AdminSourcesApiList200JSONResponse{}
+	for _, src := range list {
+		out = append(out, toSourceInfo(src))
+	}
+	return out, nil
+}
+
+func (s *server) AdminSourcesApiSync(ctx context.Context, req gen.AdminSourcesApiSyncRequestObject) (gen.AdminSourcesApiSyncResponseObject, error) {
+	if err := s.app.Sources.StartSync(ctx, currentUser(ctx), food.DatasetID(req.Id)); err != nil {
+		return nil, err
+	}
+	return gen.AdminSourcesApiSync202Response{}, nil
+}
+
 // 食品
+
+func (s *server) FoodsApiSearchExternal(ctx context.Context, req gen.FoodsApiSearchExternalRequestObject) (gen.FoodsApiSearchExternalResponseObject, error) {
+	res, err := s.app.Sources.Search(ctx, req.Params.Q)
+	if err != nil {
+		return nil, err
+	}
+	out := gen.FoodsApiSearchExternal200JSONResponse{Foods: []gen.ExternalFood{}, Failed: []string{}, Attributions: []string{}}
+	attributed := map[string]bool{}
+	for _, h := range res.Hits {
+		out.Foods = append(out.Foods, toExternalFood(h))
+		if a := h.Dataset.Attribution; a != "" && !attributed[a] {
+			attributed[a] = true
+			out.Attributions = append(out.Attributions, a)
+		}
+	}
+	for _, id := range res.Failed {
+		out.Failed = append(out.Failed, string(id))
+	}
+	return out, nil
+}
+
+func (s *server) FoodsApiSaveExternal(ctx context.Context, req gen.FoodsApiSaveExternalRequestObject) (gen.FoodsApiSaveExternalResponseObject, error) {
+	u := currentUser(ctx)
+	id, err := s.app.Sources.Save(ctx, food.DatasetID(req.Body.DatasetId), req.Body.Reference)
+	if err != nil {
+		return nil, err
+	}
+	v, err := s.app.Foods.Get(ctx, u.ID, id)
+	if err != nil {
+		return nil, err
+	}
+	return gen.FoodsApiSaveExternal200JSONResponse(toFood(v, u.ID)), nil
+}
 
 func (s *server) FoodsApiSearch(ctx context.Context, req gen.FoodsApiSearchRequestObject) (gen.FoodsApiSearchResponseObject, error) {
 	u := currentUser(ctx)

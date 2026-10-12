@@ -3,10 +3,12 @@ node_modules/
 .output/
 dist/
 backend/bin/
+backend/tmp/
 backend/data/*.db
 *.db
 *.db-shm
 *.db-wal
 .env
 .DS_Store
+.pnpm-store
 *.blend1

@@ -2,22 +2,25 @@
 import type { Schemas } from '~/composables/api/client';
 import { formatInt } from '~/utils/nutrients';
 import { formatQuantity } from '~/utils/meals';
-import { gramsOf } from '~/utils/quantity';
+import { nutrientsOf } from '~/utils/quantity';
 
 const props = defineProps<{ food: Schemas['Food']; quantity?: Schemas['Quantity'] }>();
 const emit = defineEmits<{ select: []; quickAdd: [] }>();
 const { t } = useI18n();
 
-const energyPer100 = computed(() => {
+const basisEnergy = computed(() => {
 	const energy = props.food.revision.nutrients.energy;
 	return energy ? `${formatInt(energy.amount)} kcal` : t('common.unknown');
 });
 
+const basisLabel = computed(() => {
+	const { basis } = props.food.revision;
+	return basis ? t('terms.perBasis', { unit: basis.unit }) : t('terms.per100g');
+});
+
 function kcalFor(q: Schemas['Quantity']): string {
-	const energy = props.food.revision.nutrients.energy;
-	const grams = gramsOf(props.food.revision, q);
-	if (!energy || grams === undefined) return t('common.unknown');
-	return `${formatInt(energy.amount * grams / 100)} kcal`;
+	const energy = nutrientsOf(props.food.revision, q)?.energy;
+	return energy ? `${formatInt(energy.amount)} kcal` : t('common.unknown');
 }
 </script>
 
@@ -28,7 +31,7 @@ function kcalFor(q: Schemas['Quantity']): string {
 		<span class="block truncate text-xs text-muted">
 			<template v-if="food.revision.brand">{{ food.revision.brand }} · </template>
 			<template v-if="quantity">{{ formatQuantity(quantity) }} · {{ kcalFor(quantity) }}</template>
-			<template v-else>{{ t('terms.per100g') }} {{ energyPer100 }}</template>
+			<template v-else>{{ basisLabel }} {{ basisEnergy }}</template>
 		</span>
 	</button>
 	<button

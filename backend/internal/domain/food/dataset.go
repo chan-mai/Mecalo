@@ -10,6 +10,9 @@ const (
 	DatasetMEXT          DatasetKind = "mext"
 	DatasetOpenFoodFacts DatasetKind = "openfoodfacts"
 	DatasetUser          DatasetKind = "user"
+	DatasetTabecal       DatasetKind = "tabecal"
+	// メーカー・小売・外食チェーンの公式サイト
+	DatasetOfficial DatasetKind = "official"
 )
 
 // 食品データの取込元と版

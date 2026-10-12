@@ -59,12 +59,15 @@ func Compute(def Definition) (Result, error) {
 	parts := make([]nutrient.Part, 0, len(def.Ingredients))
 	raw := decimal.Zero
 	for i, ing := range def.Ingredients {
-		grams, err := ing.Revision.Grams(ing.Quantity)
+		grams, values, err := ing.Revision.Amounts(ing.Quantity)
+		if err == nil && grams.IsZero() {
+			err = food.ErrUnknownMass
+		}
 		if err != nil {
 			return Result{}, fmt.Errorf("ingredient %d: %w", i+1, err)
 		}
 		raw = raw.Add(grams)
-		parts = append(parts, nutrient.Part{Grams: grams, Values: ing.Revision.Nutrients.ForGrams(grams)})
+		parts = append(parts, nutrient.Part{Grams: grams, Values: values})
 		lines = append(lines, Line{
 			FoodID:     ing.Revision.FoodID,
 			RevisionID: ing.Revision.ID,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Schemas } from '~/composables/api/client';
 import { formatAmount } from '~/utils/nutrients';
-import { gramsOf, scaleProfile } from '~/utils/quantity';
+import { gramsOf, nutrientsOf, unitOptions } from '~/utils/quantity';
 
 const props = defineProps<{
 	food: Schemas['Food'];
@@ -25,17 +25,14 @@ defineExpose({ amountInput });
 
 const summaryCodes = ['energy', 'protein', 'fat', 'carbohydrate'] as const;
 
-const units = computed(() => [
-	...props.food.revision.portions.map((p) => ({ unit: p.unit, label: `${p.unit} (${Math.round(p.grams)}g)` })),
-	{ unit: 'g', label: 'g' },
-]);
+const units = computed(() => unitOptions(props.food.revision).map((u) => ({
+	unit: u.unit,
+	label: u.unit !== 'g' && u.grams !== undefined ? `${u.unit} (${Math.round(u.grams)}g)` : u.unit,
+})));
 
 const presets = computed(() => (unit.value === 'g' ? [50, 100, 150, 200, 300] : [0.5, 1, 1.5, 2, 3]));
 
-const preview = computed(() => {
-	const grams = gramsOf(props.food.revision, { amount: amount.value ?? 0, unit: unit.value });
-	return scaleProfile(props.food.revision.nutrients, grams ?? 0);
-});
+const preview = computed(() => nutrientsOf(props.food.revision, { amount: amount.value ?? 0, unit: unit.value }) ?? {});
 
 // 単位変更時は同じ重量になるよう数量を換算
 function changeUnit(to: string) {
@@ -43,7 +40,7 @@ function changeUnit(to: string) {
 	unit.value = to;
 	if (amount.value === undefined) return;
 	const grams = gramsOf(props.food.revision, { amount: amount.value, unit: from });
-	const per = to === 'g' ? 1 : props.food.revision.portions.find((p) => p.unit === to)?.grams;
+	const per = gramsOf(props.food.revision, { amount: 1, unit: to });
 	if (grams !== undefined && per) amount.value = Math.round(grams / per * 100) / 100;
 }
 </script>

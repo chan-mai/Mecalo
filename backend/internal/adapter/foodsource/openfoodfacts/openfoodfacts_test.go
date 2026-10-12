@@ -16,7 +16,7 @@ import (
 
 const sample = `{"code":"4901234567894","product_name":"Green tea","product_name_ja":"緑茶","brands":"Example, Other",
 "serving_quantity":"500","countries_tags":["en:japan"],
-"nutriments":{"energy-kcal_100g":0,"proteins_100g":"0.1","salt_100g":0.02,"vitamin-c_100g":0.006}}`
+"nutriments":{"energy-kcal_100g":0,"proteins_100g":"0.1","salt_100g":0.02,"vitamin-c_100g":0.006,"sodium_100g":119.66}}`
 
 func TestToSystemFood(t *testing.T) {
 	var p Product
@@ -39,6 +39,9 @@ func TestToSystemFood(t *testing.T) {
 	if sf.Nutrients.Get(nutrient.Fat).Known() {
 		t.Error("absent fat must be missing")
 	}
+	if sf.Nutrients.Get(nutrient.Sodium).Known() {
+		t.Error("impossible sodium must be dropped")
+	}
 	if len(sf.Portions) != 1 || !sf.Portions[0].Grams.Equal(decimal.NewFromInt(500)) {
 		t.Errorf("portions = %+v", sf.Portions)
 	}
@@ -57,12 +60,12 @@ func TestLookup(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient(srv.URL)
+	c := NewClient(srv.URL, "Mecalo-Agent/vtest")
 	p, err := c.Lookup(context.Background(), "4901234567894")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.Revision.Name != "緑茶" || p.Revision.Source.DatasetID != DatasetID {
+	if p.Name != "緑茶" || p.Reference != "4901234567894" {
 		t.Errorf("product = %+v", p)
 	}
 	if _, err := c.Lookup(context.Background(), "4900000000000"); err == nil {
