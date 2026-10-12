@@ -7,6 +7,7 @@ import { pendingPrefix, slots } from '~/utils/meals';
 const props = defineProps<{ entry?: Schemas['MealEntry'] }>();
 const emit = defineEmits<{ closed: []; changed: [] }>();
 const { t } = useI18n();
+const confirmDelete = useConfirmDelete();
 const uid = useId();
 const onError = useErrorHandler();
 const api = useApi();
@@ -86,7 +87,7 @@ async function recalculate() {
 }
 
 async function remove() {
-	if (!window.confirm(t('common.confirmDelete'))) return;
+	if (!await confirmDelete()) return;
 	await run(async (id) => {
 		if (id.startsWith(pendingPrefix)) {
 			const ref = id.slice(pendingPrefix.length);

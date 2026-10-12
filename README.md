@@ -38,6 +38,13 @@ Mecalo = meal(memory) + calorie
 
 ## 設定
 
+管理者は`/admin/settings`より設定を変更することが可能です
+- WebUIより設定を行った値は環境変数より優先されます
+- `MECALO_DATABASE_URL`, `MECALO_LISTEN`, `MECALO_SECURE_COOKIE`, `MECALO_CORS_ORIGINS`, `MECALO_SETUP_TOKEN`は環境変数でのみ指定可能です
+
+初回ユーザ作成用の一時トークンは`MECALO_SETUP_TOKEN`で指定可能です(*未指定の場合は起動時に生成されログへ標準出力されます)
+
+### 環境変数
 
 | 変数 | 既定値 | 説明 |
 |---|---|---|
@@ -48,6 +55,7 @@ Mecalo = meal(memory) + calorie
 | `MECALO_REGISTRATION` | `closed` | アカウントの作成可否 `open`で誰でもアカウント作成可能 |
 | `MECALO_SECURE_COOKIE` | `true` | HTTPS環境用設定 |
 | `MECALO_CORS_ORIGINS` | なし | 許可オリジン |
+| `MECALO_SETUP_TOKEN` | なし(起動時に生成) | 初回セットアップで最初の管理者を作成する際のトークン |
 | `MECALO_OIDC_ISSUER` | なし | OIDCプロバイダ Issuer URI |
 | `MECALO_OIDC_CLIENT_ID` | なし | Client ID(public client) |
 | `MECALO_OIDC_CLIENT_SECRET` | なし | confidential clientの場合のみ |

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/chan-mai/mecalo/backend/internal/domain/food"
@@ -17,7 +18,8 @@ import (
 type Sources struct {
 	d       Deps
 	imports *Imports
-	// 同期中の取得元
+	live    *live
+	// 同期中・待機中の取得元と進捗, 値は*syncProgress
 	running sync.Map
 }
 
@@ -44,6 +46,35 @@ type SourceInfo struct {
 	Kind    SourceKind
 	Status  port.SourceStatus
 	Running bool
+	// 同期中のみ
+	Progress SyncRun
+}
+
+type SyncRun struct {
+	// ゼロ値は待機中
+	StartedAt time.Time
+	// 確認した商品数
+	Items int
+}
+
+type syncProgress struct {
+	started atomic.Int64
+	items   atomic.Int64
+}
+
+func (p *syncProgress) snapshot() SyncRun {
+	var out SyncRun
+	if n := p.started.Load(); n != 0 {
+		out.StartedAt = time.Unix(0, n)
+	}
+	out.Items = int(p.items.Load())
+	return out
+}
+
+// 同期中・待機中として登録, 登録済みはfalse
+func (s *Sources) reserve(id food.DatasetID) bool {
+	_, busy := s.running.LoadOrStore(id, &syncProgress{})
+	return !busy
 }
 
 func (s *Sources) List(ctx context.Context) ([]SourceInfo, error) {
@@ -55,19 +86,24 @@ func (s *Sources) List(ctx context.Context) ([]SourceInfo, error) {
 	for _, st := range statuses {
 		byID[st.DatasetID] = st
 	}
+	cur := s.live.get()
 	var out []SourceInfo
 	add := func(src port.FoodSource, kind SourceKind) {
 		ds := src.Dataset()
-		_, running := s.running.Load(ds.ID)
-		out = append(out, SourceInfo{Dataset: ds, Kind: kind, Status: byID[ds.ID], Running: running})
+		info := SourceInfo{Dataset: ds, Kind: kind, Status: byID[ds.ID]}
+		if p, ok := s.running.Load(ds.ID); ok {
+			info.Running = true
+			info.Progress = p.(*syncProgress).snapshot()
+		}
+		out = append(out, info)
 	}
-	if s.d.Lookup != nil {
-		add(s.d.Lookup, SourceLookup)
+	if cur.Lookup != nil {
+		add(cur.Lookup, SourceLookup)
 	}
-	for _, f := range s.d.Finders {
+	for _, f := range cur.Finders {
 		add(f, SourceFinder)
 	}
-	for _, c := range s.d.Catalogs {
+	for _, c := range cur.Catalogs {
 		add(c, SourceCatalog)
 	}
 	return out, nil
@@ -84,7 +120,7 @@ type SyncResult struct {
 }
 
 func (s *Sources) catalog(id food.DatasetID) (port.Catalog, bool) {
-	for _, c := range s.d.Catalogs {
+	for _, c := range s.live.get().Catalogs {
 		if c.Dataset().ID == id {
 			return c, true
 		}
@@ -108,7 +144,7 @@ func (s *Sources) StartSync(ctx context.Context, actor user.User, id food.Datase
 	if _, ok := s.catalog(id); !ok {
 		return ErrNotFound
 	}
-	if _, busy := s.running.LoadOrStore(id, true); busy {
+	if !s.reserve(id) {
 		return ErrConflict
 	}
 	go func() {
@@ -123,7 +159,7 @@ func (s *Sources) Sync(ctx context.Context, id food.DatasetID) (SyncResult, erro
 	if _, ok := s.catalog(id); !ok {
 		return SyncResult{}, ErrNotFound
 	}
-	if _, busy := s.running.LoadOrStore(id, true); busy {
+	if !s.reserve(id) {
 		return SyncResult{}, ErrConflict
 	}
 	defer s.running.Delete(id)
@@ -159,6 +195,9 @@ func (s *Sources) report(e SyncEvent) {
 }
 
 func (s *Sources) sync(ctx context.Context, id food.DatasetID) (SyncResult, error) {
+	if p, ok := s.running.Load(id); ok {
+		p.(*syncProgress).started.Store(s.d.Clock.Now().UnixNano())
+	}
 	s.report(SyncEvent{Source: id, Phase: SyncStarted})
 	res, items, err := s.syncOnce(ctx, id)
 	if err != nil {
@@ -184,6 +223,9 @@ func (s *Sources) syncOnce(ctx context.Context, id food.DatasetID) (SyncResult, 
 		return SyncResult{}, 0, err
 	}
 	sink := &syncSink{ctx: ctx, s: s, ds: ds, at: started, fresh: map[food.ID]bool{}}
+	if p, ok := s.running.Load(id); ok {
+		sink.progress = p.(*syncProgress)
+	}
 	for _, fid := range fresh {
 		sink.fresh[fid] = true
 	}
@@ -232,6 +274,8 @@ type syncSink struct {
 	seen  []food.ID
 	res   SyncResult
 	items int
+	// nilは進捗の公開なし
+	progress *syncProgress
 }
 
 var _ port.CatalogSink = (*syncSink)(nil)
@@ -270,6 +314,9 @@ func (k *syncSink) Failed(id food.ID, _ error) error {
 
 func (k *syncSink) count() {
 	k.items++
+	if k.progress != nil {
+		k.progress.items.Store(int64(k.items))
+	}
 	if k.items%progressEvery == 0 {
 		k.s.report(SyncEvent{Source: k.ds.ID, Phase: SyncProgress, Items: k.items, Result: k.res})
 	}
@@ -295,9 +342,36 @@ func (k *syncSink) flush(ctx context.Context) error {
 	return src.MarkSeen(ctx, k.ds.ID, fetched, k.at, true)
 }
 
+// 同期中でない全取得元を順にバックグラウンドで同期, 全て同期中ならErrConflict
+func (s *Sources) StartSyncAll(ctx context.Context, actor user.User) error {
+	if !actor.IsAdmin() {
+		return ErrForbidden
+	}
+	var ids []food.DatasetID
+	for _, c := range s.live.get().Catalogs {
+		id := c.Dataset().ID
+		if s.reserve(id) {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return ErrConflict
+	}
+	go func() {
+		ctx := context.WithoutCancel(ctx)
+		for _, id := range ids {
+			func() {
+				defer s.running.Delete(id)
+				_, _ = s.sync(ctx, id)
+			}()
+		}
+	}()
+	return nil
+}
+
 // 前回同期から間隔が過ぎた取得元のみ同期, 同期の失敗は状態とOnSyncへ記録
 func (s *Sources) SyncDue(ctx context.Context, interval time.Duration) error {
-	for _, c := range s.d.Catalogs {
+	for _, c := range s.live.get().Catalogs {
 		id := c.Dataset().ID
 		st, err := s.d.Store.Sources().Status(ctx, id)
 		if err != nil && !errors.Is(err, ErrNotFound) {
@@ -332,11 +406,12 @@ func (s *Sources) Search(ctx context.Context, query string) (ExternalResult, err
 	if key == "" {
 		return ExternalResult{}, invalid(errors.New("query is required"))
 	}
-	if len(s.d.Finders) == 0 {
+	finders := s.live.get().Finders
+	if len(finders) == 0 {
 		return ExternalResult{}, ErrDisabled
 	}
 	var out ExternalResult
-	for _, f := range s.d.Finders {
+	for _, f := range finders {
 		ds := f.Dataset()
 		foods, err := s.find(ctx, f, query, key)
 		if err != nil {
@@ -397,7 +472,7 @@ func (s *Sources) find(ctx context.Context, f port.FoodFinder, query, key string
 // 外部検索で選んだ食品をシステム食品として保存
 func (s *Sources) Save(ctx context.Context, id food.DatasetID, reference string) (food.ID, error) {
 	var finder port.FoodFinder
-	for _, f := range s.d.Finders {
+	for _, f := range s.live.get().Finders {
 		if f.Dataset().ID == id {
 			finder = f
 		}

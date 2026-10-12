@@ -8,7 +8,13 @@ import { formatInt, unitLabel } from '~/utils/nutrients';
 
 const { t, locale, locales, setLocale } = useI18n();
 const uid = useId();
-const { me, logout } = useAuth();
+const { logout } = useAuth();
+const confirm = useConfirm();
+
+async function confirmLogout() {
+	if (await confirm({ title: t('pages.settings.logoutConfirm'), confirmLabel: t('pages.settings.logout'), danger: true })) await logout();
+}
+
 const { catalog } = useNutrientCatalog();
 const onError = useErrorHandler();
 const api = useApi();
@@ -57,14 +63,8 @@ watch(settings, (s) => {
 const links = computed(() => [
 	{ to: '/history', label: 'pages.settings.links.weight' },
 	{ to: '/settings/data', label: 'pages.settings.links.data' },
-	{ to: '/settings/password', label: 'pages.settings.links.password' },
+	{ to: '/settings/account', label: 'pages.settings.links.account' },
 	{ to: '/about', label: 'pages.settings.links.about' },
-	...(me.value?.role === 'admin'
-		? [
-			{ to: '/admin/users', label: 'pages.settings.links.users' },
-			{ to: '/admin/sources', label: 'pages.settings.links.sources' },
-		]
-		: []),
 ]);
 
 function placeholder(code: string, side: 'min' | 'max'): string {
@@ -192,7 +192,7 @@ async function save() {
 				@update:modelValue="(v) => setLocale(v as 'ja' | 'en')"
 			/>
 		</div>
-		<button type="button" class="w-full px-4 py-3 text-left text-danger" @click="logout">{{ t('pages.settings.logout') }}</button>
+		<button type="button" class="w-full px-4 py-3 text-left text-danger" @click="confirmLogout">{{ t('pages.settings.logout') }}</button>
 	</section>
 </div>
 </template>

@@ -34,10 +34,11 @@ const (
 )
 
 func (s *server) AuthApiOidcStart(ctx context.Context, req gen.AuthApiOidcStartRequestObject) (gen.AuthApiOidcStartResponseObject, error) {
-	if s.opt.OIDC == nil {
+	p := s.opt.Auth().OIDC
+	if p == nil {
 		return nil, app.ErrDisabled
 	}
-	url, flow, err := s.opt.OIDC.Begin(ctx)
+	url, flow, err := p.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +64,8 @@ func (s *server) AuthApiOidcCallback(ctx context.Context, req gen.AuthApiOidcCal
 	redirect := func(to string) gen.AuthApiOidcCallbackResponseObject {
 		return gen.AuthApiOidcCallback302Response{Headers: gen.AuthApiOidcCallback302ResponseHeaders{Location: to}}
 	}
-	if s.opt.OIDC == nil {
+	p := s.opt.Auth().OIDC
+	if p == nil {
 		return nil, app.ErrDisabled
 	}
 	http.SetCookie(responseWriter(ctx), &http.Cookie{Name: oidcCookie, Path: oidcCookiePath, MaxAge: -1, HttpOnly: true, Secure: s.opt.SecureCookie})
@@ -73,7 +75,7 @@ func (s *server) AuthApiOidcCallback(ctx context.Context, req gen.AuthApiOidcCal
 		s.opt.Logger.WarnContext(ctx, "oidc callback rejected", "error", err, "provider_error", str(req.Params.Error))
 		return redirect(loginErrorPath), nil
 	}
-	id, err := s.opt.OIDC.Finish(ctx, *req.Params.Code, flow)
+	id, err := p.Finish(ctx, *req.Params.Code, flow)
 	if err != nil {
 		s.opt.Logger.WarnContext(ctx, "oidc login failed", "error", err)
 		return redirect(loginErrorPath), nil

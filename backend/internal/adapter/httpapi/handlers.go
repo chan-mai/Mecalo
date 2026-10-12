@@ -24,14 +24,15 @@ func (s *server) AuthApiConfig(ctx context.Context, _ gen.AuthApiConfigRequestOb
 	if err != nil {
 		return nil, err
 	}
+	auth := s.opt.Auth()
 	res := gen.AuthApiConfig200JSONResponse{
-		SetupRequired:    setup && s.opt.LocalAuth,
-		RegistrationOpen: s.app.Accounts.RegistrationOpen() && s.opt.LocalAuth,
-		LocalEnabled:     s.opt.LocalAuth,
-		OidcEnabled:      s.opt.OIDC != nil,
+		SetupRequired:    setup && auth.Local,
+		RegistrationOpen: s.app.Accounts.RegistrationOpen() && auth.Local,
+		LocalEnabled:     auth.Local,
+		OidcEnabled:      auth.OIDC != nil,
 	}
-	if s.opt.OIDC != nil {
-		name := s.opt.OIDC.Name()
+	if auth.OIDC != nil {
+		name := auth.OIDC.Name()
 		res.OidcName = &name
 	}
 	return res, nil
@@ -42,10 +43,11 @@ func signUpInput(b gen.SignUpRequest) app.SignUpInput {
 }
 
 func (s *server) AuthApiSetup(ctx context.Context, req gen.AuthApiSetupRequestObject) (gen.AuthApiSetupResponseObject, error) {
-	if !s.opt.LocalAuth {
+	if !s.opt.Auth().Local {
 		return nil, app.ErrDisabled
 	}
-	sess, err := s.app.Accounts.Setup(ctx, signUpInput(*req.Body))
+	b := req.Body
+	sess, err := s.app.Accounts.Setup(ctx, b.SetupToken, signUpInput(gen.SignUpRequest{LoginName: b.LoginName, DisplayName: b.DisplayName, Password: b.Password}))
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +56,7 @@ func (s *server) AuthApiSetup(ctx context.Context, req gen.AuthApiSetupRequestOb
 }
 
 func (s *server) AuthApiSignUp(ctx context.Context, req gen.AuthApiSignUpRequestObject) (gen.AuthApiSignUpResponseObject, error) {
-	if !s.opt.LocalAuth {
+	if !s.opt.Auth().Local {
 		return nil, app.ErrDisabled
 	}
 	sess, err := s.app.Accounts.SignUp(ctx, signUpInput(*req.Body))
@@ -66,7 +68,7 @@ func (s *server) AuthApiSignUp(ctx context.Context, req gen.AuthApiSignUpRequest
 }
 
 func (s *server) AuthApiLogin(ctx context.Context, req gen.AuthApiLoginRequestObject) (gen.AuthApiLoginResponseObject, error) {
-	if !s.opt.LocalAuth {
+	if !s.opt.Auth().Local {
 		return nil, app.ErrDisabled
 	}
 	sess, err := s.app.Accounts.LoginLocal(ctx, req.Body.LoginName, req.Body.Password)
@@ -88,7 +90,23 @@ func (s *server) AuthApiLogout(ctx context.Context, _ gen.AuthApiLogoutRequestOb
 }
 
 func (s *server) MeApiGet(ctx context.Context, _ gen.MeApiGetRequestObject) (gen.MeApiGetResponseObject, error) {
-	return gen.MeApiGet200JSONResponse(toUser(currentUser(ctx))), nil
+	acc, err := s.app.Accounts.Account(ctx, currentUser(ctx))
+	if err != nil {
+		return nil, err
+	}
+	return gen.MeApiGet200JSONResponse(toAccount(acc)), nil
+}
+
+func profileUpdate(displayName, loginName *string) app.ProfileUpdate {
+	return app.ProfileUpdate{DisplayName: displayName, LoginName: loginName}
+}
+
+func (s *server) MeApiUpdate(ctx context.Context, req gen.MeApiUpdateRequestObject) (gen.MeApiUpdateResponseObject, error) {
+	acc, err := s.app.Accounts.UpdateProfile(ctx, currentUser(ctx), profileUpdate(req.Body.DisplayName, req.Body.LoginName))
+	if err != nil {
+		return nil, err
+	}
+	return gen.MeApiUpdate200JSONResponse(toAccount(acc)), nil
 }
 
 func (s *server) MeApiChangePassword(ctx context.Context, req gen.MeApiChangePasswordRequestObject) (gen.MeApiChangePasswordResponseObject, error) {
@@ -105,9 +123,31 @@ func (s *server) AdminApiList(ctx context.Context, _ gen.AdminApiListRequestObje
 	}
 	out := gen.AdminApiList200JSONResponse{}
 	for _, u := range users {
-		out = append(out, toUser(u))
+		out = append(out, toAccount(u))
 	}
 	return out, nil
+}
+
+func (s *server) AdminApiGet(ctx context.Context, req gen.AdminApiGetRequestObject) (gen.AdminApiGetResponseObject, error) {
+	acc, err := s.app.Accounts.GetUser(ctx, currentUser(ctx), user.ID(req.Id))
+	if err != nil {
+		return nil, err
+	}
+	return gen.AdminApiGet200JSONResponse(toAccount(acc)), nil
+}
+
+func (s *server) AdminApiUpdate(ctx context.Context, req gen.AdminApiUpdateRequestObject) (gen.AdminApiUpdateResponseObject, error) {
+	b := req.Body
+	in := app.UserUpdate{ProfileUpdate: profileUpdate(b.DisplayName, b.LoginName), Password: b.Password}
+	if b.Role != nil {
+		role := user.Role(*b.Role)
+		in.Role = &role
+	}
+	acc, err := s.app.Accounts.UpdateUser(ctx, currentUser(ctx), user.ID(req.Id), in)
+	if err != nil {
+		return nil, err
+	}
+	return gen.AdminApiUpdate200JSONResponse(toAccount(acc)), nil
 }
 
 func (s *server) AdminApiCreate(ctx context.Context, req gen.AdminApiCreateRequestObject) (gen.AdminApiCreateResponseObject, error) {
@@ -140,11 +180,85 @@ func (s *server) AdminSourcesApiList(ctx context.Context, _ gen.AdminSourcesApiL
 	return out, nil
 }
 
+func (s *server) AdminSourcesApiSyncAll(ctx context.Context, _ gen.AdminSourcesApiSyncAllRequestObject) (gen.AdminSourcesApiSyncAllResponseObject, error) {
+	if err := s.app.Sources.StartSyncAll(ctx, currentUser(ctx)); err != nil {
+		return nil, err
+	}
+	return gen.AdminSourcesApiSyncAll202Response{}, nil
+}
+
 func (s *server) AdminSourcesApiSync(ctx context.Context, req gen.AdminSourcesApiSyncRequestObject) (gen.AdminSourcesApiSyncResponseObject, error) {
 	if err := s.app.Sources.StartSync(ctx, currentUser(ctx), food.DatasetID(req.Id)); err != nil {
 		return nil, err
 	}
 	return gen.AdminSourcesApiSync202Response{}, nil
+}
+
+func (s *server) instance() (*app.Instance, error) {
+	if s.app.Instance == nil {
+		return nil, app.ErrDisabled
+	}
+	return s.app.Instance, nil
+}
+
+func toInstanceSettings(list []app.Setting) []gen.InstanceSetting {
+	out := make([]gen.InstanceSetting, 0, len(list))
+	for _, st := range list {
+		out = append(out, gen.InstanceSetting{
+			Key: st.Key, Group: st.Group, Kind: gen.SettingKind(st.Kind), Options: nonNil(st.Options),
+			Value: st.Value, DefaultValue: st.Default, EnvValue: st.EnvValue, HasEnv: st.HasEnv,
+			Configured: st.Configured, Origin: gen.SettingOrigin(st.Origin),
+		})
+	}
+	return out
+}
+
+func (s *server) AdminSettingsApiList(ctx context.Context, _ gen.AdminSettingsApiListRequestObject) (gen.AdminSettingsApiListResponseObject, error) {
+	inst, err := s.instance()
+	if err != nil {
+		return nil, err
+	}
+	list, err := inst.List(ctx, currentUser(ctx))
+	if err != nil {
+		return nil, err
+	}
+	return gen.AdminSettingsApiList200JSONResponse(toInstanceSettings(list)), nil
+}
+
+func (s *server) AdminSettingsApiUpdate(ctx context.Context, req gen.AdminSettingsApiUpdateRequestObject) (gen.AdminSettingsApiUpdateResponseObject, error) {
+	inst, err := s.instance()
+	if err != nil {
+		return nil, err
+	}
+	list, err := inst.Update(ctx, currentUser(ctx), req.Body.Values)
+	if err != nil {
+		return nil, err
+	}
+	return gen.AdminSettingsApiUpdate200JSONResponse(toInstanceSettings(list)), nil
+}
+
+func (s *server) AdminSettingsApiResetAll(ctx context.Context, _ gen.AdminSettingsApiResetAllRequestObject) (gen.AdminSettingsApiResetAllResponseObject, error) {
+	inst, err := s.instance()
+	if err != nil {
+		return nil, err
+	}
+	list, err := inst.Reset(ctx, currentUser(ctx), nil)
+	if err != nil {
+		return nil, err
+	}
+	return gen.AdminSettingsApiResetAll200JSONResponse(toInstanceSettings(list)), nil
+}
+
+func (s *server) AdminSettingsApiReset(ctx context.Context, req gen.AdminSettingsApiResetRequestObject) (gen.AdminSettingsApiResetResponseObject, error) {
+	inst, err := s.instance()
+	if err != nil {
+		return nil, err
+	}
+	list, err := inst.Reset(ctx, currentUser(ctx), []string{req.Key})
+	if err != nil {
+		return nil, err
+	}
+	return gen.AdminSettingsApiReset200JSONResponse(toInstanceSettings(list)), nil
 }
 
 // 食品

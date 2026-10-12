@@ -144,7 +144,7 @@ func newEnvWith(t *testing.T, s port.Store, opt func(*app.Deps)) *env {
 	a := app.New(deps, app.Options{RegistrationOpen: true})
 	e := &env{app: a, store: s, ctx: context.Background()}
 
-	sess, err := a.Accounts.Setup(e.ctx, app.SignUpInput{LoginName: "alice", Password: "password-a"})
+	sess, err := a.Accounts.Setup(e.ctx, "", app.SignUpInput{LoginName: "alice", Password: "password-a"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -534,7 +534,7 @@ func TestExportImport(t *testing.T) {
 		if err := s.Users().Delete(e.ctx, e.alice.ID); err != nil {
 			t.Fatal(err)
 		}
-		sess, err := e.app.Accounts.Setup(e.ctx, app.SignUpInput{LoginName: "carol", Password: "password-c"})
+		sess, err := e.app.Accounts.Setup(e.ctx, "", app.SignUpInput{LoginName: "carol", Password: "password-c"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -554,7 +554,7 @@ func TestExportImport(t *testing.T) {
 func TestAccounts(t *testing.T) {
 	eachStore(t, func(t *testing.T, s port.Store) {
 		e := newEnv(t, s)
-		if _, err := e.app.Accounts.Setup(e.ctx, app.SignUpInput{LoginName: "mallory", Password: "password-m"}); !errors.Is(err, app.ErrForbidden) {
+		if _, err := e.app.Accounts.Setup(e.ctx, "", app.SignUpInput{LoginName: "mallory", Password: "password-m"}); !errors.Is(err, app.ErrConflict) {
 			t.Errorf("second setup: %v", err)
 		}
 		if _, err := e.app.Accounts.LoginLocal(e.ctx, "alice", "nope"); !errors.Is(err, app.ErrUnauthorized) {

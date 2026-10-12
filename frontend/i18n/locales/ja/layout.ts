@@ -8,6 +8,7 @@ export default {
 		history: '履歴',
 		foods: '食品',
 		settings: '設定',
+		admin: '管理',
 	},
 	syncStatus: {
 		offline: 'オフラインです。入力は端末に保存し、接続時に同期します',

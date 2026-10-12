@@ -7,6 +7,8 @@ export default {
 		signup: 'Create account',
 		setup: 'Initial setup',
 		setupHint: 'Create the first administrator account',
+		setupToken: 'Setup token',
+		setupTokenHint: 'Enter the value of the MECALO_SETUP_TOKEN environment variable. (*If it is not set, it is printed in the startup log)',
 		loginWith: 'Log in with {name}',
 		noAccount: 'Don\'t have an account?',
 	},

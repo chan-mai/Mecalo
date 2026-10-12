@@ -4,6 +4,42 @@
  */
 
 export interface paths {
+    "/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 設定の一覧と値の出どころ */
+        get: operations["AdminSettingsApi_list"];
+        /** @description 設定の変更, 環境変数・既定値と同じ値はWebUIでの設定を解除 */
+        put: operations["AdminSettingsApi_update"];
+        post?: never;
+        /** @description 全項目を環境変数・既定値へ戻す */
+        delete: operations["AdminSettingsApi_resetAll"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/settings/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description 1項目を環境変数・既定値へ戻す */
+        delete: operations["AdminSettingsApi_reset"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/sources": {
         parameters: {
             query?: never;
@@ -15,6 +51,23 @@ export interface paths {
         get: operations["AdminSourcesApi_list"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/sources/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 同期中でない全取得元の商品一覧の同期を順に開始 */
+        post: operations["AdminSourcesApi_syncAll"];
         delete?: never;
         options?: never;
         head?: never;
@@ -61,13 +114,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["AdminApi_get"];
         put?: never;
         post?: never;
         delete: operations["AdminApi_delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** @description 自身の管理者権限は外せない */
+        patch: operations["AdminApi_update"];
         trace?: never;
     };
     "/auth/config": {
@@ -160,7 +214,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 利用者0件時のみ管理者を作成しログイン */
+        /** @description 利用者0件時のみ, セットアップトークン一致時に管理者を作成しログイン */
         post: operations["AuthApi_setup"];
         delete?: never;
         options?: never;
@@ -447,7 +501,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** @description 表示名・ログイン名の変更 */
+        patch: operations["MeApi_update"];
         trace?: never;
     };
     "/me/password": {
@@ -1008,6 +1063,29 @@ export interface components {
             foodId: string;
             quantity: components["schemas"]["Quantity"];
         };
+        /** @description WebUIで変更できる設定 */
+        InstanceSetting: {
+            /** @description 環境変数名 */
+            key: string;
+            group: string;
+            kind: components["schemas"]["SettingKind"];
+            options: string[];
+            /** @description 現在の値, 秘密の値は空 */
+            value: string;
+            defaultValue: string;
+            /** @description 環境変数の値, 秘密の値は空 */
+            envValue: string;
+            hasEnv: boolean;
+            /** @description 値の有無 */
+            configured: boolean;
+            origin: components["schemas"]["SettingOrigin"];
+        };
+        InstanceSettingsUpdate: {
+            /** @description 変更する項目のみ, キーは環境変数名 */
+            values: {
+                [key: string]: string;
+            };
+        };
         /** @enum {string} */
         Level: "deficient" | "low" | "adequate" | "high" | "excessive" | "unknown" | "none";
         /** @description 記録時点の食品情報と栄養値を保持 */
@@ -1126,6 +1204,11 @@ export interface components {
             /** @description 鉄の基準値選択用 */
             menstruating: boolean;
         };
+        /** @description 省略した項目は変更なし */
+        ProfileUpdate: {
+            displayName?: string;
+            loginName?: string;
+        };
         Quantity: {
             /** Format: double */
             amount: number;
@@ -1202,6 +1285,10 @@ export interface components {
         };
         /** @enum {string} */
         Role: "admin" | "member";
+        /** @enum {string} */
+        SettingKind: "text" | "secret" | "bool" | "duration" | "choice" | "choices" | "list";
+        /** @enum {string} */
+        SettingOrigin: "default" | "env" | "ui";
         Settings: {
             /** Format: date */
             effectiveFrom: string;
@@ -1216,6 +1303,13 @@ export interface components {
             effectiveFrom?: string;
             profile: components["schemas"]["Profile"];
             overrides?: components["schemas"]["TargetOverride"][];
+        };
+        SetupRequest: {
+            loginName: string;
+            password: string;
+            displayName?: string;
+            /** @description MECALO_SETUP_TOKENの値, 未指定時は起動時のログに出力 */
+            setupToken: string;
         };
         /** @enum {string} */
         Sex: "male" | "female";
@@ -1236,8 +1330,18 @@ export interface components {
              * @description 直近の同期で確認した商品数
              */
             items: number;
-            /** @description 同期中 */
+            /** @description 同期中または待機中 */
             running: boolean;
+            /**
+             * Format: date-time
+             * @description 同期の開始時刻, 待機中と同期中以外は省略
+             */
+            runningSince?: string;
+            /**
+             * Format: int32
+             * @description 同期中に確認した商品数
+             */
+            runningItems?: number;
         };
         /** @enum {string} */
         SourceKind: "lookup" | "finder" | "catalog";
@@ -1264,9 +1368,19 @@ export interface components {
         User: {
             id: string;
             displayName: string;
+            /** @description ローカルのログイン名, OIDCのみの利用者は省略 */
+            loginName?: string;
             role: components["schemas"]["Role"];
             /** Format: date-time */
             createdAt: string;
+        };
+        /** @description 省略した項目は変更なし */
+        UserUpdate: {
+            displayName?: string;
+            loginName?: string;
+            role?: components["schemas"]["Role"];
+            /** @description 現在のパスワードなしで再設定, 対象のセッションは破棄 */
+            password?: string;
         };
         Weight: {
             /** Format: date */
@@ -1291,6 +1405,236 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    AdminSettingsApi_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceSetting"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    AdminSettingsApi_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstanceSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceSetting"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    AdminSettingsApi_resetAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceSetting"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    AdminSettingsApi_reset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceSetting"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     AdminSourcesApi_list: {
         parameters: {
             query?: never;
@@ -1338,6 +1682,69 @@ export interface operations {
             };
             /** @description The server cannot find the requested resource. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    AdminSourcesApi_syncAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has been accepted for processing, but processing has not yet completed. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request conflicts with the current state of the server. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1537,6 +1944,64 @@ export interface operations {
             };
         };
     };
+    AdminApi_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     AdminApi_delete: {
         parameters: {
             query?: never;
@@ -1584,6 +2049,77 @@ export interface operations {
             };
             /** @description The server cannot find the requested resource. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    AdminApi_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserUpdate"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request conflicts with the current state of the server. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1762,7 +2298,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SignUpRequest"];
+                "application/json": components["schemas"]["SetupRequest"];
             };
         };
         responses: {
@@ -3038,6 +3574,75 @@ export interface operations {
             };
             /** @description Access is unauthorized. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    MeApi_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request conflicts with the current state of the server. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

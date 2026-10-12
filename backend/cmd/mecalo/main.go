@@ -3,6 +3,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -23,7 +25,6 @@ import (
 	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/mext"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/openfoodfacts"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/httpapi"
-	"github.com/chan-mai/mecalo/backend/internal/adapter/oidc"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/password"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/reading"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/sqlstore"
@@ -44,7 +45,8 @@ Commands:
   backup -out path              Write an online SQLite backup
   export -login name            Write a user's data as JSON to stdout
 
-Configuration is read from MECALO_* environment variables. See README.md.
+Configuration is read from MECALO_* environment variables. Administrators can
+override most of them at /admin/settings. See README.md.
 `
 
 func main() {
@@ -64,7 +66,7 @@ func run(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	cfg, err := loadConfig()
+	cfg, err := loadBootConfig()
 	if err != nil {
 		return err
 	}
@@ -101,12 +103,18 @@ func run(args []string) error {
 }
 
 type runtime struct {
-	app   *app.App
-	store *sqlstore.Store
+	app        *app.App
+	store      *sqlstore.Store
+	live       *liveState
+	setupToken string
+	// 起動時に生成したトークン
+	generatedToken bool
 }
 
-func open(ctx context.Context, cfg config) (*runtime, error) {
+// 保存済みの設定まで反映
+func open(ctx context.Context, cfg bootConfig, serving bool) (*runtime, error) {
 	reader := reading.New()
+	clock := system.NewClock(time.UTC)
 	store, err := openStore(ctx, cfg.DatabaseURL, sqlstore.WithReader(reader))
 	if err != nil {
 		return nil, err
@@ -119,18 +127,37 @@ func open(ctx context.Context, cfg config) (*runtime, error) {
 	deps := app.Deps{
 		Store:     store,
 		Reader:    reader,
-		Clock:     system.Clock{Location: cfg.Location},
+		Clock:     clock,
 		IDs:       system.UUIDs{},
 		Reference: ref,
 		Hasher:    password.Default(),
 	}
 	deps.OnSync = logSync
-	if err := configureSources(cfg, &deps); err != nil {
+	generated := cfg.SetupToken == ""
+	if generated {
+		deps.SetupToken = randomToken()
+	} else {
+		deps.SetupToken = cfg.SetupToken
+	}
+	a := app.New(deps, app.Options{})
+	l := &liveState{app: a, clock: clock, serving: serving}
+	defs := settingDefs()
+	a.Instance = app.NewInstance(store, clock, defs, settingEnv(defs), l.prepare)
+	ignored, err := a.Instance.Load(ctx)
+	if err != nil {
 		store.Close()
 		return nil, err
 	}
-	a := app.New(deps, app.Options{RegistrationOpen: cfg.Registration(), OIDCAutoProvision: cfg.OIDCAutoCreate})
-	return &runtime{app: a, store: store}, nil
+	if ignored != nil {
+		slog.Error("settings saved at /admin/settings were not applied; using environment variables and defaults", "error", ignored)
+	}
+	return &runtime{app: a, store: store, live: l, setupToken: deps.SetupToken, generatedToken: generated}, nil
+}
+
+func randomToken() string {
+	b := make([]byte, 24)
+	_, _ = rand.Read(b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }
 
 func openStore(ctx context.Context, url string, opts ...sqlstore.Option) (*sqlstore.Store, error) {
@@ -144,28 +171,21 @@ func openStore(ctx context.Context, url string, opts ...sqlstore.Option) (*sqlst
 	return sqlstore.OpenSQLite(ctx, path, opts...)
 }
 
-func serve(ctx context.Context, cfg config) error {
-	rt, err := open(ctx, cfg)
+func serve(ctx context.Context, cfg bootConfig) error {
+	rt, err := open(ctx, cfg, true)
 	if err != nil {
 		return err
 	}
 	defer rt.store.Close()
 
 	opt := httpapi.Options{
-		LocalAuth:      cfg.LocalAuth(),
+		Auth:           rt.live.authMethods,
 		SecureCookie:   cfg.SecureCookie,
 		AllowedOrigins: cfg.CORSOrigins,
 		Logger:         slog.Default(),
 	}
-	if cfg.OIDCEnabled() {
-		p, err := oidc.New(ctx, oidc.Config{
-			Name: cfg.OIDCName, Issuer: cfg.OIDCIssuer, ClientID: cfg.OIDCClientID,
-			ClientSecret: cfg.OIDCSecret, RedirectURL: cfg.OIDCRedirectURL, Scopes: cfg.OIDCScopes,
-		})
-		if err != nil {
-			return err
-		}
-		opt.OIDC = p
+	if err := logSetup(ctx, rt); err != nil {
+		return err
 	}
 	handler, err := httpapi.NewHandler(rt.app, opt)
 	if err != nil {
@@ -181,9 +201,7 @@ func serve(ctx context.Context, cfg config) error {
 		MaxHeaderBytes:    1 << 20,
 	}
 	go purgeSessions(ctx, rt.app)
-	if cfg.SyncInterval > 0 {
-		go syncSources(ctx, rt.app, cfg.SyncInterval)
-	}
+	go syncSources(ctx, rt.app, rt.live.syncInterval)
 
 	errc := make(chan error, 1)
 	go func() {
@@ -198,6 +216,20 @@ func serve(ctx context.Context, cfg config) error {
 	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	return srv.Shutdown(shutdown)
+}
+
+// 利用者0件時のみ初回セットアップの案内
+func logSetup(ctx context.Context, rt *runtime) error {
+	needs, err := rt.app.Accounts.NeedsSetup(ctx)
+	if err != nil || !needs {
+		return err
+	}
+	if rt.generatedToken {
+		slog.Warn("no users yet: create the first administrator at /setup with this setup token, or set MECALO_SETUP_TOKEN", "setup_token", rt.setupToken)
+		return nil
+	}
+	slog.Warn("no users yet: create the first administrator at /setup with MECALO_SETUP_TOKEN")
+	return nil
 }
 
 func purgeSessions(ctx context.Context, a *app.App) {
@@ -215,13 +247,15 @@ func purgeSessions(ctx context.Context, a *app.App) {
 	}
 }
 
-// 間隔の過ぎた取得元を1時間ごとに確認
-func syncSources(ctx context.Context, a *app.App, interval time.Duration) {
+// 間隔の過ぎた取得元を1時間ごとに確認, 間隔0は同期なし
+func syncSources(ctx context.Context, a *app.App, interval func() time.Duration) {
 	t := time.NewTicker(time.Hour)
 	defer t.Stop()
 	for {
-		if err := a.Sources.SyncDue(ctx, interval); err != nil && ctx.Err() == nil {
-			slog.Warn("sync sources", "error", err)
+		if d := interval(); d > 0 {
+			if err := a.Sources.SyncDue(ctx, d); err != nil && ctx.Err() == nil {
+				slog.Warn("sync sources", "error", err)
+			}
 		}
 		if err := a.Sources.PurgeCache(ctx); err != nil && ctx.Err() == nil {
 			slog.Warn("purge source cache", "error", err)
@@ -250,8 +284,8 @@ func logSync(e app.SyncEvent) {
 	}
 }
 
-func syncCommand(ctx context.Context, cfg config, args []string) error {
-	rt, err := open(ctx, cfg)
+func syncCommand(ctx context.Context, cfg bootConfig, args []string) error {
+	rt, err := open(ctx, cfg, false)
 	if err != nil {
 		return err
 	}
@@ -277,7 +311,7 @@ func syncCommand(ctx context.Context, cfg config, args []string) error {
 	return nil
 }
 
-func importMEXT(ctx context.Context, cfg config, args []string) error {
+func importMEXT(ctx context.Context, cfg bootConfig, args []string) error {
 	fs := flag.NewFlagSet("import mext", flag.ContinueOnError)
 	file := fs.String("file", "", "local xlsx path (downloads from MEXT when empty)")
 	url := fs.String("url", mext.DefaultURL, "download URL")
@@ -314,7 +348,7 @@ func importMEXT(ctx context.Context, cfg config, args []string) error {
 		return err
 	}
 
-	rt, err := open(ctx, cfg)
+	rt, err := open(ctx, cfg, false)
 	if err != nil {
 		return err
 	}
@@ -327,7 +361,7 @@ func importMEXT(ctx context.Context, cfg config, args []string) error {
 	return nil
 }
 
-func importOFF(ctx context.Context, cfg config, args []string) error {
+func importOFF(ctx context.Context, cfg bootConfig, args []string) error {
 	fs := flag.NewFlagSet("import off", flag.ContinueOnError)
 	file := fs.String("file", "", "Open Food Facts JSONL dump (.jsonl or .jsonl.gz)")
 	country := fs.String("country", "japan", "countries_tags value without the en: prefix")
@@ -343,7 +377,7 @@ func importOFF(ctx context.Context, cfg config, args []string) error {
 	}
 	defer f.Close()
 
-	rt, err := open(ctx, cfg)
+	rt, err := open(ctx, cfg, false)
 	if err != nil {
 		return err
 	}
@@ -376,7 +410,7 @@ func importOFF(ctx context.Context, cfg config, args []string) error {
 	return nil
 }
 
-func createUser(ctx context.Context, cfg config, args []string) error {
+func createUser(ctx context.Context, cfg bootConfig, args []string) error {
 	fs := flag.NewFlagSet("user create", flag.ContinueOnError)
 	login := fs.String("login", "", "login name")
 	name := fs.String("name", "", "display name")
@@ -388,7 +422,7 @@ func createUser(ctx context.Context, cfg config, args []string) error {
 	if pw == "" {
 		return errors.New("set the password in MECALO_NEW_PASSWORD")
 	}
-	rt, err := open(ctx, cfg)
+	rt, err := open(ctx, cfg, false)
 	if err != nil {
 		return err
 	}
@@ -405,7 +439,7 @@ func createUser(ctx context.Context, cfg config, args []string) error {
 	return nil
 }
 
-func backup(ctx context.Context, cfg config, args []string) error {
+func backup(ctx context.Context, cfg bootConfig, args []string) error {
 	fs := flag.NewFlagSet("backup", flag.ContinueOnError)
 	out := fs.String("out", "", "destination file")
 	if err := fs.Parse(args); err != nil {
@@ -417,7 +451,7 @@ func backup(ctx context.Context, cfg config, args []string) error {
 	if _, err := os.Stat(*out); err == nil {
 		return fmt.Errorf("%s already exists", *out)
 	}
-	rt, err := open(ctx, cfg)
+	rt, err := open(ctx, cfg, false)
 	if err != nil {
 		return err
 	}
@@ -429,13 +463,13 @@ func backup(ctx context.Context, cfg config, args []string) error {
 	return nil
 }
 
-func export(ctx context.Context, cfg config, args []string) error {
+func export(ctx context.Context, cfg bootConfig, args []string) error {
 	fs := flag.NewFlagSet("export", flag.ContinueOnError)
 	login := fs.String("login", "", "local login name")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	rt, err := open(ctx, cfg)
+	rt, err := open(ctx, cfg, false)
 	if err != nil {
 		return err
 	}

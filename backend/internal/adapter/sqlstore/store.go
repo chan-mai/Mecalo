@@ -183,6 +183,7 @@ func (r repos) QueryLinks() port.QueryLinkRepository        { return queryLinks(
 func (r repos) Settings() port.SettingsRepository           { return settings(r) }
 func (r repos) Weights() port.WeightRepository              { return weights(r) }
 func (r repos) Sources() port.SourceRepository              { return sources(r) }
+func (r repos) Instance() port.InstanceSettingRepository    { return instance(r) }
 
 // ゼロ値はNULL
 func nullTimeArg(d dialect, t time.Time) any {

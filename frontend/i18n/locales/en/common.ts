@@ -17,6 +17,7 @@ export default {
 		data: 'DATA',
 		about: 'ABOUT',
 		users: 'USERS',
+		admin: 'ADMIN',
 		password: 'PASSWORD',
 		search: 'SEARCH',
 		create: 'CREATE',
@@ -73,5 +74,6 @@ export default {
 		long: 'ddd, MMM D',
 		short: 'M/D',
 		full: 'MMM D, YYYY',
+		dateTime: 'MMM D, YYYY HH:mm',
 	},
 } satisfies typeof ja;

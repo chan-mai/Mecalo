@@ -43,6 +43,8 @@ type Deps struct {
 	Finders []port.FoodFinder
 	// 定期同期する商品一覧
 	Catalogs []port.Catalog
+	// 初回の管理者作成に必要なトークン, 空は不要
+	SetupToken string
 	// 同期の経過の通知先, nilは通知なし
 	OnSync func(SyncEvent)
 	Hasher port.PasswordHasher
@@ -60,6 +62,10 @@ type App struct {
 	Exports  *Exports
 	Imports  *Imports
 	Sources  *Sources
+	// 管理者が変更する設定, 未設定はnil
+	Instance *Instance
+
+	live *live
 }
 
 type Options struct {
@@ -69,9 +75,10 @@ type Options struct {
 
 func New(d Deps, opt Options) *App {
 	imports := &Imports{d: d}
+	l := newLive(d, opt)
 	return &App{
-		Accounts: &Accounts{d: d, opt: opt},
-		Foods:    &Foods{d: d, imports: imports},
+		Accounts: &Accounts{d: d, live: l},
+		Foods:    &Foods{d: d, imports: imports, live: l},
 		Meals:    &Meals{d: d},
 		Recipes:  &Recipes{d: d},
 		Reports:  &Reports{d: d},
@@ -79,7 +86,8 @@ func New(d Deps, opt Options) *App {
 		Weights:  &Weights{d: d},
 		Exports:  &Exports{d: d},
 		Imports:  imports,
-		Sources:  &Sources{d: d, imports: imports},
+		Sources:  &Sources{d: d, imports: imports, live: l},
+		live:     l,
 	}
 }
 

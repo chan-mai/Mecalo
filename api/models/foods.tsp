@@ -197,6 +197,12 @@ model Source {
   @doc("直近の同期で確認した商品数")
   items: int32;
 
-  @doc("同期中")
+  @doc("同期中または待機中")
   running: boolean;
+
+  @doc("同期の開始時刻, 待機中と同期中以外は省略")
+  runningSince?: utcDateTime;
+
+  @doc("同期中に確認した商品数")
+  runningItems?: int32;
 }

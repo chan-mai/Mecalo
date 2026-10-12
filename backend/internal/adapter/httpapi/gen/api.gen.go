@@ -295,6 +295,60 @@ func (e Role) Valid() bool {
 	}
 }
 
+// Defines values for SettingKind.
+const (
+	Bool     SettingKind = "bool"
+	Choice   SettingKind = "choice"
+	Choices  SettingKind = "choices"
+	Duration SettingKind = "duration"
+	List     SettingKind = "list"
+	Secret   SettingKind = "secret"
+	Text     SettingKind = "text"
+)
+
+// Valid indicates whether the value is a known member of the SettingKind enum.
+func (e SettingKind) Valid() bool {
+	switch e {
+	case Bool:
+		return true
+	case Choice:
+		return true
+	case Choices:
+		return true
+	case Duration:
+		return true
+	case List:
+		return true
+	case Secret:
+		return true
+	case Text:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SettingOrigin.
+const (
+	Default SettingOrigin = "default"
+	Env     SettingOrigin = "env"
+	Ui      SettingOrigin = "ui"
+)
+
+// Valid indicates whether the value is a known member of the SettingOrigin enum.
+func (e SettingOrigin) Valid() bool {
+	switch e {
+	case Default:
+		return true
+	case Env:
+		return true
+	case Ui:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Sex.
 const (
 	Female Sex = "female"
@@ -630,6 +684,33 @@ type IngredientInput struct {
 	Quantity Quantity `json:"quantity"`
 }
 
+// InstanceSetting WebUIで変更できる設定
+type InstanceSetting struct {
+	// Configured 値の有無
+	Configured   bool   `json:"configured"`
+	DefaultValue string `json:"defaultValue"`
+
+	// EnvValue 環境変数の値, 秘密の値は空
+	EnvValue string `json:"envValue"`
+	Group    string `json:"group"`
+	HasEnv   bool   `json:"hasEnv"`
+
+	// Key 環境変数名
+	Key     string        `json:"key"`
+	Kind    SettingKind   `json:"kind"`
+	Options []string      `json:"options"`
+	Origin  SettingOrigin `json:"origin"`
+
+	// Value 現在の値, 秘密の値は空
+	Value string `json:"value"`
+}
+
+// InstanceSettingsUpdate defines model for InstanceSettingsUpdate.
+type InstanceSettingsUpdate struct {
+	// Values 変更する項目のみ, キーは環境変数名
+	Values map[string]string `json:"values"`
+}
+
 // Level defines model for Level.
 type Level string
 
@@ -746,6 +827,12 @@ type Profile struct {
 	Sex          Sex  `json:"sex"`
 }
 
+// ProfileUpdate 省略した項目は変更なし
+type ProfileUpdate struct {
+	DisplayName *string `json:"displayName,omitempty"`
+	LoginName   *string `json:"loginName,omitempty"`
+}
+
 // Quantity defines model for Quantity.
 type Quantity struct {
 	Amount float64 `json:"amount"`
@@ -826,6 +913,12 @@ type ReferenceInfo struct {
 // Role defines model for Role.
 type Role string
 
+// SettingKind defines model for SettingKind.
+type SettingKind string
+
+// SettingOrigin defines model for SettingOrigin.
+type SettingOrigin string
+
 // Settings defines model for Settings.
 type Settings struct {
 	EffectiveFrom openapi_types.Date `json:"effectiveFrom"`
@@ -839,6 +932,16 @@ type SettingsInput struct {
 	EffectiveFrom *openapi_types.Date `json:"effectiveFrom,omitempty"`
 	Overrides     *[]TargetOverride   `json:"overrides,omitempty"`
 	Profile       Profile             `json:"profile"`
+}
+
+// SetupRequest defines model for SetupRequest.
+type SetupRequest struct {
+	DisplayName *string `json:"displayName,omitempty"`
+	LoginName   string  `json:"loginName"`
+	Password    string  `json:"password"`
+
+	// SetupToken MECALO_SETUP_TOKENの値, 未指定時は起動時のログに出力
+	SetupToken string `json:"setupToken"`
 }
 
 // Sex defines model for Sex.
@@ -862,9 +965,15 @@ type Source struct {
 	Items int32      `json:"items"`
 	Kind  SourceKind `json:"kind"`
 
-	// Running 同期中
-	Running  bool       `json:"running"`
-	SyncedAt *time.Time `json:"syncedAt,omitempty"`
+	// Running 同期中または待機中
+	Running bool `json:"running"`
+
+	// RunningItems 同期中に確認した商品数
+	RunningItems *int32 `json:"runningItems,omitempty"`
+
+	// RunningSince 同期の開始時刻, 待機中と同期中以外は省略
+	RunningSince *time.Time `json:"runningSince,omitempty"`
+	SyncedAt     *time.Time `json:"syncedAt,omitempty"`
 }
 
 // SourceKind defines model for SourceKind.
@@ -897,7 +1006,20 @@ type User struct {
 	CreatedAt   time.Time `json:"createdAt"`
 	DisplayName string    `json:"displayName"`
 	Id          string    `json:"id"`
-	Role        Role      `json:"role"`
+
+	// LoginName ローカルのログイン名, OIDCのみの利用者は省略
+	LoginName *string `json:"loginName,omitempty"`
+	Role      Role    `json:"role"`
+}
+
+// UserUpdate 省略した項目は変更なし
+type UserUpdate struct {
+	DisplayName *string `json:"displayName,omitempty"`
+	LoginName   *string `json:"loginName,omitempty"`
+
+	// Password 現在のパスワードなしで再設定, 対象のセッションは破棄
+	Password *string `json:"password,omitempty"`
+	Role     *Role   `json:"role,omitempty"`
 }
 
 // Weight defines model for Weight.
@@ -958,14 +1080,20 @@ type WeightsApiListParams struct {
 	To   openapi_types.Date `form:"to" json:"to"`
 }
 
+// AdminSettingsApiUpdateJSONRequestBody defines body for AdminSettingsApiUpdate for application/json ContentType.
+type AdminSettingsApiUpdateJSONRequestBody = InstanceSettingsUpdate
+
 // AdminApiCreateJSONRequestBody defines body for AdminApiCreate for application/json ContentType.
 type AdminApiCreateJSONRequestBody = CreateUserRequest
+
+// AdminApiUpdateJSONRequestBody defines body for AdminApiUpdate for application/json ContentType.
+type AdminApiUpdateJSONRequestBody = UserUpdate
 
 // AuthApiLoginJSONRequestBody defines body for AuthApiLogin for application/json ContentType.
 type AuthApiLoginJSONRequestBody = Credentials
 
 // AuthApiSetupJSONRequestBody defines body for AuthApiSetup for application/json ContentType.
-type AuthApiSetupJSONRequestBody = SignUpRequest
+type AuthApiSetupJSONRequestBody = SetupRequest
 
 // AuthApiSignUpJSONRequestBody defines body for AuthApiSignUp for application/json ContentType.
 type AuthApiSignUpJSONRequestBody = SignUpRequest
@@ -984,6 +1112,9 @@ type FoodsApiRecordSelectionJSONRequestBody = FoodSelection
 
 // ImportApiJsonJSONRequestBody defines body for ImportApiJson for application/json ContentType.
 type ImportApiJsonJSONRequestBody = ExportBundle
+
+// MeApiUpdateJSONRequestBody defines body for MeApiUpdate for application/json ContentType.
+type MeApiUpdateJSONRequestBody = ProfileUpdate
 
 // MeApiChangePasswordJSONRequestBody defines body for MeApiChangePassword for application/json ContentType.
 type MeApiChangePasswordJSONRequestBody = PasswordChange
@@ -1012,8 +1143,23 @@ type WeightsApiSaveJSONRequestBody = WeightInput
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
+	// (DELETE /admin/settings)
+	AdminSettingsApiResetAll(w http.ResponseWriter, r *http.Request)
+
+	// (GET /admin/settings)
+	AdminSettingsApiList(w http.ResponseWriter, r *http.Request)
+
+	// (PUT /admin/settings)
+	AdminSettingsApiUpdate(w http.ResponseWriter, r *http.Request)
+
+	// (DELETE /admin/settings/{key})
+	AdminSettingsApiReset(w http.ResponseWriter, r *http.Request, key string)
+
 	// (GET /admin/sources)
 	AdminSourcesApiList(w http.ResponseWriter, r *http.Request)
+
+	// (POST /admin/sources/sync)
+	AdminSourcesApiSyncAll(w http.ResponseWriter, r *http.Request)
 
 	// (POST /admin/sources/{id}/sync)
 	AdminSourcesApiSync(w http.ResponseWriter, r *http.Request, id string)
@@ -1026,6 +1172,12 @@ type ServerInterface interface {
 
 	// (DELETE /admin/users/{id})
 	AdminApiDelete(w http.ResponseWriter, r *http.Request, id string)
+
+	// (GET /admin/users/{id})
+	AdminApiGet(w http.ResponseWriter, r *http.Request, id string)
+
+	// (PATCH /admin/users/{id})
+	AdminApiUpdate(w http.ResponseWriter, r *http.Request, id string)
 
 	// (GET /auth/config)
 	AuthApiConfig(w http.ResponseWriter, r *http.Request)
@@ -1111,6 +1263,9 @@ type ServerInterface interface {
 	// (GET /me)
 	MeApiGet(w http.ResponseWriter, r *http.Request)
 
+	// (PATCH /me)
+	MeApiUpdate(w http.ResponseWriter, r *http.Request)
+
 	// (PUT /me/password)
 	MeApiChangePassword(w http.ResponseWriter, r *http.Request)
 
@@ -1193,11 +1348,93 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
+// AdminSettingsApiResetAll operation middleware
+func (siw *ServerInterfaceWrapper) AdminSettingsApiResetAll(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AdminSettingsApiResetAll(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AdminSettingsApiList operation middleware
+func (siw *ServerInterfaceWrapper) AdminSettingsApiList(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AdminSettingsApiList(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AdminSettingsApiUpdate operation middleware
+func (siw *ServerInterfaceWrapper) AdminSettingsApiUpdate(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AdminSettingsApiUpdate(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AdminSettingsApiReset operation middleware
+func (siw *ServerInterfaceWrapper) AdminSettingsApiReset(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AdminSettingsApiReset(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AdminSourcesApiList operation middleware
 func (siw *ServerInterfaceWrapper) AdminSourcesApiList(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AdminSourcesApiList(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AdminSourcesApiSyncAll operation middleware
+func (siw *ServerInterfaceWrapper) AdminSourcesApiSyncAll(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AdminSourcesApiSyncAll(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1278,6 +1515,58 @@ func (siw *ServerInterfaceWrapper) AdminApiDelete(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AdminApiDelete(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AdminApiGet operation middleware
+func (siw *ServerInterfaceWrapper) AdminApiGet(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AdminApiGet(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AdminApiUpdate operation middleware
+func (siw *ServerInterfaceWrapper) AdminApiUpdate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AdminApiUpdate(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1935,6 +2224,20 @@ func (siw *ServerInterfaceWrapper) MeApiGet(w http.ResponseWriter, r *http.Reque
 	handler.ServeHTTP(w, r)
 }
 
+// MeApiUpdate operation middleware
+func (siw *ServerInterfaceWrapper) MeApiUpdate(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MeApiUpdate(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // MeApiChangePassword operation middleware
 func (siw *ServerInterfaceWrapper) MeApiChangePassword(w http.ResponseWriter, r *http.Request) {
 
@@ -2563,11 +2866,18 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/admin/settings", wrapper.AdminSettingsApiResetAll)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/settings", wrapper.AdminSettingsApiList)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/admin/settings", wrapper.AdminSettingsApiUpdate)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/admin/settings/{key}", wrapper.AdminSettingsApiReset)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/sources", wrapper.AdminSourcesApiList)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/sources/sync", wrapper.AdminSourcesApiSyncAll)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/sources/{id}/sync", wrapper.AdminSourcesApiSync)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/users", wrapper.AdminApiList)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/users", wrapper.AdminApiCreate)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/admin/users/{id}", wrapper.AdminApiDelete)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/users/{id}", wrapper.AdminApiGet)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/admin/users/{id}", wrapper.AdminApiUpdate)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/auth/config", wrapper.AuthApiConfig)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/login", wrapper.AuthApiLogin)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/logout", wrapper.AuthApiLogout)
@@ -2596,6 +2906,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/health", wrapper.HealthApiGet)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/import", wrapper.ImportApiJson)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me", wrapper.MeApiGet)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/me", wrapper.MeApiUpdate)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/me/password", wrapper.MeApiChangePassword)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/meals", wrapper.MealsApiAdd)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/meals/copy", wrapper.MealsApiCopy)
@@ -2622,6 +2933,316 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/weights/{date}", wrapper.WeightsApiSave)
 
 	return m
+}
+
+type AdminSettingsApiResetAllRequestObject struct {
+}
+
+type AdminSettingsApiResetAllResponseObject interface {
+	VisitAdminSettingsApiResetAllResponse(w http.ResponseWriter) error
+}
+
+type AdminSettingsApiResetAll200JSONResponse []InstanceSetting
+
+func (response AdminSettingsApiResetAll200JSONResponse) VisitAdminSettingsApiResetAllResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiResetAll400ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiResetAll400ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiResetAllResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiResetAll401ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiResetAll401ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiResetAllResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiResetAll403ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiResetAll403ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiResetAllResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiResetAll404ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiResetAll404ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiResetAllResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiListRequestObject struct {
+}
+
+type AdminSettingsApiListResponseObject interface {
+	VisitAdminSettingsApiListResponse(w http.ResponseWriter) error
+}
+
+type AdminSettingsApiList200JSONResponse []InstanceSetting
+
+func (response AdminSettingsApiList200JSONResponse) VisitAdminSettingsApiListResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiList400ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiList400ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiListResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiList401ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiList401ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiListResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiList403ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiList403ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiListResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiList404ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiList404ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiListResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiUpdateRequestObject struct {
+	Body *AdminSettingsApiUpdateJSONRequestBody
+}
+
+type AdminSettingsApiUpdateResponseObject interface {
+	VisitAdminSettingsApiUpdateResponse(w http.ResponseWriter) error
+}
+
+type AdminSettingsApiUpdate200JSONResponse []InstanceSetting
+
+func (response AdminSettingsApiUpdate200JSONResponse) VisitAdminSettingsApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiUpdate400ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiUpdate400ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiUpdate401ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiUpdate401ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiUpdate403ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiUpdate403ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiUpdate404ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiUpdate404ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiResetRequestObject struct {
+	Key string `json:"key"`
+}
+
+type AdminSettingsApiResetResponseObject interface {
+	VisitAdminSettingsApiResetResponse(w http.ResponseWriter) error
+}
+
+type AdminSettingsApiReset200JSONResponse []InstanceSetting
+
+func (response AdminSettingsApiReset200JSONResponse) VisitAdminSettingsApiResetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiReset400ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiReset400ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiResetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiReset401ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiReset401ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiResetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiReset403ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiReset403ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiResetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSettingsApiReset404ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSettingsApiReset404ApplicationProblemPlusJSONResponse) VisitAdminSettingsApiResetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type AdminSourcesApiListRequestObject struct {
@@ -2697,6 +3318,91 @@ func (response AdminSourcesApiList404ApplicationProblemPlusJSONResponse) VisitAd
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSourcesApiSyncAllRequestObject struct {
+}
+
+type AdminSourcesApiSyncAllResponseObject interface {
+	VisitAdminSourcesApiSyncAllResponse(w http.ResponseWriter) error
+}
+
+type AdminSourcesApiSyncAll202Response struct {
+}
+
+func (response AdminSourcesApiSyncAll202Response) VisitAdminSourcesApiSyncAllResponse(w http.ResponseWriter) error {
+	w.WriteHeader(202)
+	return nil
+}
+
+type AdminSourcesApiSyncAll400ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSourcesApiSyncAll400ApplicationProblemPlusJSONResponse) VisitAdminSourcesApiSyncAllResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSourcesApiSyncAll401ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSourcesApiSyncAll401ApplicationProblemPlusJSONResponse) VisitAdminSourcesApiSyncAllResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSourcesApiSyncAll403ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSourcesApiSyncAll403ApplicationProblemPlusJSONResponse) VisitAdminSourcesApiSyncAllResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSourcesApiSyncAll404ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSourcesApiSyncAll404ApplicationProblemPlusJSONResponse) VisitAdminSourcesApiSyncAllResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminSourcesApiSyncAll409ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminSourcesApiSyncAll409ApplicationProblemPlusJSONResponse) VisitAdminSourcesApiSyncAllResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -3024,6 +3730,177 @@ func (response AdminApiDelete404ApplicationProblemPlusJSONResponse) VisitAdminAp
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminApiGetRequestObject struct {
+	Id string `json:"id"`
+}
+
+type AdminApiGetResponseObject interface {
+	VisitAdminApiGetResponse(w http.ResponseWriter) error
+}
+
+type AdminApiGet200JSONResponse User
+
+func (response AdminApiGet200JSONResponse) VisitAdminApiGetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminApiGet400ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminApiGet400ApplicationProblemPlusJSONResponse) VisitAdminApiGetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminApiGet401ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminApiGet401ApplicationProblemPlusJSONResponse) VisitAdminApiGetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminApiGet403ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminApiGet403ApplicationProblemPlusJSONResponse) VisitAdminApiGetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminApiGet404ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminApiGet404ApplicationProblemPlusJSONResponse) VisitAdminApiGetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminApiUpdateRequestObject struct {
+	Id   string `json:"id"`
+	Body *AdminApiUpdateJSONRequestBody
+}
+
+type AdminApiUpdateResponseObject interface {
+	VisitAdminApiUpdateResponse(w http.ResponseWriter) error
+}
+
+type AdminApiUpdate200JSONResponse User
+
+func (response AdminApiUpdate200JSONResponse) VisitAdminApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminApiUpdate400ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminApiUpdate400ApplicationProblemPlusJSONResponse) VisitAdminApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminApiUpdate401ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminApiUpdate401ApplicationProblemPlusJSONResponse) VisitAdminApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminApiUpdate403ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminApiUpdate403ApplicationProblemPlusJSONResponse) VisitAdminApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminApiUpdate404ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminApiUpdate404ApplicationProblemPlusJSONResponse) VisitAdminApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminApiUpdate409ApplicationProblemPlusJSONResponse Problem
+
+func (response AdminApiUpdate409ApplicationProblemPlusJSONResponse) VisitAdminApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -4943,6 +5820,98 @@ func (response MeApiGet401ApplicationProblemPlusJSONResponse) VisitMeApiGetRespo
 	return err
 }
 
+type MeApiUpdateRequestObject struct {
+	Body *MeApiUpdateJSONRequestBody
+}
+
+type MeApiUpdateResponseObject interface {
+	VisitMeApiUpdateResponse(w http.ResponseWriter) error
+}
+
+type MeApiUpdate200JSONResponse User
+
+func (response MeApiUpdate200JSONResponse) VisitMeApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MeApiUpdate400ApplicationProblemPlusJSONResponse Problem
+
+func (response MeApiUpdate400ApplicationProblemPlusJSONResponse) VisitMeApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MeApiUpdate401ApplicationProblemPlusJSONResponse Problem
+
+func (response MeApiUpdate401ApplicationProblemPlusJSONResponse) VisitMeApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MeApiUpdate403ApplicationProblemPlusJSONResponse Problem
+
+func (response MeApiUpdate403ApplicationProblemPlusJSONResponse) VisitMeApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MeApiUpdate404ApplicationProblemPlusJSONResponse Problem
+
+func (response MeApiUpdate404ApplicationProblemPlusJSONResponse) VisitMeApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MeApiUpdate409ApplicationProblemPlusJSONResponse Problem
+
+func (response MeApiUpdate409ApplicationProblemPlusJSONResponse) VisitMeApiUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type MeApiChangePasswordRequestObject struct {
 	Body *MeApiChangePasswordJSONRequestBody
 }
@@ -6789,8 +7758,23 @@ func (response WeightsApiSave404ApplicationProblemPlusJSONResponse) VisitWeights
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
+	// (DELETE /admin/settings)
+	AdminSettingsApiResetAll(ctx context.Context, request AdminSettingsApiResetAllRequestObject) (AdminSettingsApiResetAllResponseObject, error)
+
+	// (GET /admin/settings)
+	AdminSettingsApiList(ctx context.Context, request AdminSettingsApiListRequestObject) (AdminSettingsApiListResponseObject, error)
+
+	// (PUT /admin/settings)
+	AdminSettingsApiUpdate(ctx context.Context, request AdminSettingsApiUpdateRequestObject) (AdminSettingsApiUpdateResponseObject, error)
+
+	// (DELETE /admin/settings/{key})
+	AdminSettingsApiReset(ctx context.Context, request AdminSettingsApiResetRequestObject) (AdminSettingsApiResetResponseObject, error)
+
 	// (GET /admin/sources)
 	AdminSourcesApiList(ctx context.Context, request AdminSourcesApiListRequestObject) (AdminSourcesApiListResponseObject, error)
+
+	// (POST /admin/sources/sync)
+	AdminSourcesApiSyncAll(ctx context.Context, request AdminSourcesApiSyncAllRequestObject) (AdminSourcesApiSyncAllResponseObject, error)
 
 	// (POST /admin/sources/{id}/sync)
 	AdminSourcesApiSync(ctx context.Context, request AdminSourcesApiSyncRequestObject) (AdminSourcesApiSyncResponseObject, error)
@@ -6803,6 +7787,12 @@ type StrictServerInterface interface {
 
 	// (DELETE /admin/users/{id})
 	AdminApiDelete(ctx context.Context, request AdminApiDeleteRequestObject) (AdminApiDeleteResponseObject, error)
+
+	// (GET /admin/users/{id})
+	AdminApiGet(ctx context.Context, request AdminApiGetRequestObject) (AdminApiGetResponseObject, error)
+
+	// (PATCH /admin/users/{id})
+	AdminApiUpdate(ctx context.Context, request AdminApiUpdateRequestObject) (AdminApiUpdateResponseObject, error)
 
 	// (GET /auth/config)
 	AuthApiConfig(ctx context.Context, request AuthApiConfigRequestObject) (AuthApiConfigResponseObject, error)
@@ -6887,6 +7877,9 @@ type StrictServerInterface interface {
 
 	// (GET /me)
 	MeApiGet(ctx context.Context, request MeApiGetRequestObject) (MeApiGetResponseObject, error)
+
+	// (PATCH /me)
+	MeApiUpdate(ctx context.Context, request MeApiUpdateRequestObject) (MeApiUpdateResponseObject, error)
 
 	// (PUT /me/password)
 	MeApiChangePassword(ctx context.Context, request MeApiChangePasswordRequestObject) (MeApiChangePasswordResponseObject, error)
@@ -7000,6 +7993,111 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
+// AdminSettingsApiResetAll operation middleware
+func (sh *strictHandler) AdminSettingsApiResetAll(w http.ResponseWriter, r *http.Request) {
+	var request AdminSettingsApiResetAllRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AdminSettingsApiResetAll(ctx, request.(AdminSettingsApiResetAllRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AdminSettingsApiResetAll")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AdminSettingsApiResetAllResponseObject); ok {
+		if err := validResponse.VisitAdminSettingsApiResetAllResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AdminSettingsApiList operation middleware
+func (sh *strictHandler) AdminSettingsApiList(w http.ResponseWriter, r *http.Request) {
+	var request AdminSettingsApiListRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AdminSettingsApiList(ctx, request.(AdminSettingsApiListRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AdminSettingsApiList")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AdminSettingsApiListResponseObject); ok {
+		if err := validResponse.VisitAdminSettingsApiListResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AdminSettingsApiUpdate operation middleware
+func (sh *strictHandler) AdminSettingsApiUpdate(w http.ResponseWriter, r *http.Request) {
+	var request AdminSettingsApiUpdateRequestObject
+
+	var body AdminSettingsApiUpdateJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AdminSettingsApiUpdate(ctx, request.(AdminSettingsApiUpdateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AdminSettingsApiUpdate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AdminSettingsApiUpdateResponseObject); ok {
+		if err := validResponse.VisitAdminSettingsApiUpdateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AdminSettingsApiReset operation middleware
+func (sh *strictHandler) AdminSettingsApiReset(w http.ResponseWriter, r *http.Request, key string) {
+	var request AdminSettingsApiResetRequestObject
+
+	request.Key = key
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AdminSettingsApiReset(ctx, request.(AdminSettingsApiResetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AdminSettingsApiReset")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AdminSettingsApiResetResponseObject); ok {
+		if err := validResponse.VisitAdminSettingsApiResetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // AdminSourcesApiList operation middleware
 func (sh *strictHandler) AdminSourcesApiList(w http.ResponseWriter, r *http.Request) {
 	var request AdminSourcesApiListRequestObject
@@ -7017,6 +8115,30 @@ func (sh *strictHandler) AdminSourcesApiList(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(AdminSourcesApiListResponseObject); ok {
 		if err := validResponse.VisitAdminSourcesApiListResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AdminSourcesApiSyncAll operation middleware
+func (sh *strictHandler) AdminSourcesApiSyncAll(w http.ResponseWriter, r *http.Request) {
+	var request AdminSourcesApiSyncAllRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AdminSourcesApiSyncAll(ctx, request.(AdminSourcesApiSyncAllRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AdminSourcesApiSyncAll")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AdminSourcesApiSyncAllResponseObject); ok {
+		if err := validResponse.VisitAdminSourcesApiSyncAllResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -7124,6 +8246,65 @@ func (sh *strictHandler) AdminApiDelete(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(AdminApiDeleteResponseObject); ok {
 		if err := validResponse.VisitAdminApiDeleteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AdminApiGet operation middleware
+func (sh *strictHandler) AdminApiGet(w http.ResponseWriter, r *http.Request, id string) {
+	var request AdminApiGetRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AdminApiGet(ctx, request.(AdminApiGetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AdminApiGet")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AdminApiGetResponseObject); ok {
+		if err := validResponse.VisitAdminApiGetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AdminApiUpdate operation middleware
+func (sh *strictHandler) AdminApiUpdate(w http.ResponseWriter, r *http.Request, id string) {
+	var request AdminApiUpdateRequestObject
+
+	request.Id = id
+
+	var body AdminApiUpdateJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AdminApiUpdate(ctx, request.(AdminApiUpdateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AdminApiUpdate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AdminApiUpdateResponseObject); ok {
+		if err := validResponse.VisitAdminApiUpdateResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -7885,6 +9066,37 @@ func (sh *strictHandler) MeApiGet(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// MeApiUpdate operation middleware
+func (sh *strictHandler) MeApiUpdate(w http.ResponseWriter, r *http.Request) {
+	var request MeApiUpdateRequestObject
+
+	var body MeApiUpdateJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.MeApiUpdate(ctx, request.(MeApiUpdateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MeApiUpdate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(MeApiUpdateResponseObject); ok {
+		if err := validResponse.VisitMeApiUpdateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // MeApiChangePassword operation middleware
 func (sh *strictHandler) MeApiChangePassword(w http.ResponseWriter, r *http.Request) {
 	var request MeApiChangePasswordRequestObject
@@ -8544,126 +9756,143 @@ func (sh *strictHandler) WeightsApiSave(w http.ResponseWriter, r *http.Request, 
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"7H1rc9tGuuZfYWHPhzm1tCXH2dkdf5MlJ0cn9tgjOTNVm+OdgoAm1SMQYHCRxeNSlUBad2ms2LFlRfJd",
+	"jmhpTDmJJ1Gk2P4xLYDkv9hCNwCCRIMEdbPp6S+JLDX68nY/7/3tvsEJSiaryEDWNe7cDU4ThkGGxz/2",
+	"CDochXruIhgFkvMLIBsZ7txXnKRc55JcRhGByuuAS3LDMD3MXUtyei4LuHOcpqtQTnPjSa5HFC8BXrog",
+	"62rO6SGrKlmg6hDgAQQJAlkfACnnHyLQBBVmdajI3DnOmlqsTpj2Sh6Zper0YmV9unr/R/vlU5R/iQq/",
+	"OaPzYxeBnNaHuXO//5QysujM7NwNLqWoGV7nzpFfUBqmFEXsF52moT99bfCyDnU8839TnWly/6OrRq4u",
+	"l1Zdf/LajSc5TVL0Vu0dkgw67cbHk5wKvjagCkSHsO4ccR/+zALzqJFYGfobEHRMYkMf7lXkFEyHCSwp",
+	"gkN8fkgCwRUOKYoEeNn5WoGi0LLBH/kMCG8RKrxE+Vcov44KP5W/3as+eIrMrcqTYnl9F5krKD9/ub+v",
+	"FxWWnXaFJdxuwlpapO2BCtJQ01Xe6flyFsj0qWhAN7IDPrlCR2bmRfnbYmVisnt/72dkblgzD6zVhyi/",
+	"hwoFVJhB+af4h2VkLljvJivfm7WZ+IM07Ef9iJR5JutJXE9P2m6d5zWoheduP75ZXZ+zJtaRWbIe7dq7",
+	"96rTt5KJ8ppZvvscmdvWre3qs0fVQvFMd3eaSzZsc1rlM5ROz1iL9/ffLBIEVadv/S7974Eu93cW7ft/",
+	"55IcGBMkQ4Oj4BKUYcZBuK4aIBlAjmIMSc65zHgNuv2VyUZmCKjOygwZ6rQ5TMwnE2eqzx6VX87Ww/Zs",
+	"N+7R++eZ0Llo2Aw8AI2mvUo250BKCwMgpSqZvticQFUygy58eUm6nOLOfRUXyNeSDQsndMYMbNuaLFoL",
+	"u9bMlDOKrsSekK4c03QKyCxaSwvIvO/Nq4HWPt38+VIJrwJeB19qQHUwAjQ9vAEi1LISn/M4SGiJkpKG",
+	"svfXLK/rQHWm+/++4k/9d8+p/9t96g9/PX3q2o2zybOfjP8bjUZZXtOuKyrmB4HT9H9oXEaRQCvWPOC0",
+	"aaRGbZKB8dz+IugiAlmH1CN5ciuOswra9Pt4KOUGQFZRKRsKRnnJwAwQ/xPqgLCeZkS94H+DTzUZj1dV",
+	"nkhMI5Ph1ZZCto/PDbotnU54NQ2IxhIPG1fdD8LQqOxu7b+5Yxcmrcc/oMLe/ps71elFZC7Ya5vllb3q",
+	"wo/I3ET5WYKgsIhw55SsowydrDqvAQpJeV1X4ZBBpkPBCKRrJzDj7BAQe/QQMzmlwwyVo4xAmd6ZBAUg",
+	"a3SMylHgNVSJ+vtRoGr0xTQQDzowwnNyR6l9W5sSGSdZR6a61dOJ7Z+WEL2Hcj5bFUXo9MdLV+paNDtI",
+	"fzR01VFbr6hKCjrMgjJ6bOUTOIpxr2LI9XsIZf3sJ7X2UNZBmkhZXdF5qe0p0tXMwOBex0mPOBE0/TME",
+	"12ma4Coq/IYKj4kaWP62iMzSGXv5uSNaGpWVtmjjfhOLy9QMDQqTkXgdaPpfAEwPtyFQ3fZhnmG9uWMv",
+	"P9/fe27NLiJzw16bsO+9QmaJMA+i0nr8szlTq7HaJrvkkMHvkrY1AQ4btrIUMUL2enZdsxkS4w9L6utA",
+	"rd84Ty8M64LZbOy2zsxB3BP9Z9y4kVJ4hd56vB6pZBpzKHjekEUJ0HRVz4KwZqYcRXyyiArTzsnOvwsd",
+	"YzDWPvdN8aOKCvWGMx1W+xrOrmMHtiFs8cQ+UxSR3heZaM2YzwCBl5RTZD1UIz7j6daHh6EGdB3K6fi9",
+	"DXofUDozNHLImn3vKKcNIsld+JlrlMN4HQM+/vQ8BtE4uUZ1mlA9KN0C58ddSYA6tYl4ux88PN6ORJ9w",
+	"vPthucerkbxAwKp8W6dZBBJo85MITcbTSppR2lnSF047TFoBZl3d6QASfAB/3uv8QYOeVlrPCsgI5WLJ",
+	"mnmOzBIy3yUTxPWEzG1U2ESFOyi/gwobqPBTfx9H2QgVjELN05IbbLG7m9atX6qPfR5T152j28Q5eg5B",
+	"BtxBWh7AoKLlHYPgpgfnSz9WjpnCS97BapCG6/eqhaJ16571dhkblyV7fa38+mn5n0v2w7Uz+3s/JxP2",
+	"2ub+uwfWy/shTjrkuUSarZb4TcaT3JDKR6iwItGv+5v+le7KCk6deLAiHFWRqrDsCqiDqI8OYtuyp66Q",
+	"D2g8UQUpoAJZoM9S40eB6+ysJwDZGntnBpnvnFP5+LW1NIPMUvXZI+uOGTzhEZp8jfj1pA7OyNfxyR4G",
+	"iRYgQqvjNwgkINA1neYnoBlpmqym9lmzmQ0CXhWGB4BmSM0tPBo/wDBB5pa1tIXMtyi/gPLzwSNp7byy",
+	"fnhIDmaQPbTWHHgoUV2luHNkbiBz0bFuzXlkPkPmI3/Q9kZpUz8JsJLWgtMTfpD4V+soSduQ9kWfK8fo",
+	"PmcRaoIi61A2oulINml/Z6Ly/YZDyvys/fMMMmeQ+YjgJ5kg/NDaflv54Ym1fo/ieU5yQIQ6P0RTTO3Z",
+	"CXttFpnL5V+K1dUp69Z2pfCG2oenJNAXc2Ti15U6bUmoWBLJp0FgKbUdatiOwEyiTkK/nDVoeJQgrwGa",
+	"Hz6wTw7wZp4TQRANhgw/1k/++El3GBrNzt1RyT1PJgVc6590t/KtN0iswzhCCI1pbpCjE2wNh8eVI7Ul",
+	"RO3/F+7R9owdTedlkcfe26yqiIbgqD6CoelKhvP0SqoNVHeWj/M8hU/Q0ZySAyj4UGzPHeiaUfEcWfXH",
+	"L5Y3JqQ6hd0ywTAZMvPIfITyc8kEJqK9MG2VviMhEGQ+QGbJD5C5DY9aGdMUQxVAHDY5SFpSmaRL1pD2",
+	"5B26CD3KHz6491E4aaJUfW0A4kStJzWRbCh/u2ruIPNn7AfbsiafW3OryFxG5iNy9CubD+ujfme62wz7",
+	"kfEjJ+6T+MCqIG1dxERLJlBhCft/fsL+zVkSw6R059B/1EMXTUewl5/bK3kuGRN6rmc9StsofIdntZNM",
+	"lF/s4vDwvcrb36zJgjVZ3H9zpy1tPaifO8PSKP25wjckgGC/fIaHss5DmUtyaed/NMbZj/30UYqxrzrG",
+	"4Bi+GypG26CfKU7zEZjNEgUvRuuAk6hl6wh9lqwl6OYJ+H682dB2ol8WocDrikqJLPIwpstVTF/ix+K3",
+	"hXLMtoCP6/RVRT6uK1mK1XCcSqu0CsSaikI9fUeW+kPZ6dbJO/2yo5EIwHVzhjH/FzD0ZT8yN6z1WXv1",
+	"tWux5ecrxZdW6buQK0XAeUAGPT0GJ5fYa7Plm0+otoMIUrwhuS52Gk2APOr/scGCvf3Kelpw5nj3laPm",
+	"TKwnE+WN+9b2FPkXMrfLL3ZpjC6tKkaWOtowr12QR+mGzAjINZ9EhPsmjqXjboVn7CjZsDrQUmlTVJiG",
+	"csyRLpPGwVBIw8JuvbXWiu3QteEsOuTySO0bXd7CvGEbDkBgu/29SAYPmL/KGOda+zLrhf3qDyweuqkF",
+	"QjHX612PBBcrKD9ffTxZXi2F3LWR58KbbgO13DnRlhXKhBRBCgoOh8GZYNcdrUwEXxuBrEicXwU0DY5i",
+	"ASuPyMp1R2DKiky3NOryJRsyFYr3qws/2iv5cv5X3znnJi6YxVoOWf72/rsH9oIZdrVGmwfBVMwjiQ4c",
+	"Qf6l86fIzKFUwCKL+N7Pi4shZ6KMneMwU/C8SIzR37STyTc9iE2S5AyM3ja2n2bGROS2NmxjYNNrlo5v",
+	"yPgE8va23vapHeL62EZt/jRQ+9QJ4HpIBfxIitcwrg1ZGMa+J1kmYTqZF0ao2PW2vg+koAzbDMf7ojDO",
+	"4focNw6kXcb56EunbUTwHPfjTYJGpvqRA7QCMlDTOWwOCKpC0kSBipNJRqHOZyIMg3r3UVhdwaYkSSXx",
+	"QZJM8BnFkHU/idVe26wUZ+ydf4RYHWkYE/yazuuGVh8V5zVXzAFNhxme+B91lRdIJqymOeu4Rjv6kaTz",
+	"OMIhHW5uEkQjV/EFHiFX+fVj326tScNNbJzX0S1yuoM+VaKTlctzP9uT81hbaItwSU7gJcGQ8J+bHQ+S",
+	"t3cIYyc65I3dfvEtIbd9bGvo/VtZaddsbzwnRVRYRIUtlC/hM1Eqr5bs4oojhJLvy3gLcaRmLOhLl+d5",
+	"Z25EwNzGOVUZ5z9GuumR8o2YQ3AMQRkFKp+mxZJxNIhk3GNddAqZTzBYFqyZdfv+3zECv0fmTZSft2Z/",
+	"tJZmfteNJtbO/Hs86td4VRxe4WK4kcTuWv3eAguiEf6Kmy7cO8zLaQrpBENVAaFdWIMCY3q7qcpef+7X",
+	"1Cm5btfQXHyl74jrGmIUJ3haCXW+qjIkgUz4vAx81pv4w6f/638n3BaJPqDzEHuHGlya+Pf0uL5/JuKk",
+	"kEJdAk3M2FZLJd/7g0Ys1hN0DRhzS8paHd/60rPxJDcEVX24L37qqKOS9Ih/MzT9C4HGBMurpfJ3N5G5",
+	"Zb1bQ+Z97P+vY4vW02V7Z/V3DmvpspefxwSnx3GbrQ07U8eT3DD2/fVmjvCsZoCs6arB031J1dmbfnmR",
+	"NbFeNXfsuYflb4tUb5AGxlr7L8YoFVNjXHC3AstM1nbfJRRloxrW0ORw1VwKtEoXEoPwPALbnpvAUX/C",
+	"wKqvUWlVWXjIAg6agvingOEXJZSOtUzrv7j0f3EJZL51gGBuu8Eds0QCZFRvWpREiSzT+pMBhZErUBih",
+	"O2LjmKRH5plt5Zf150qrKaNm8TafirdyWvaMMzdXeB6+NxUIR9aXhnOa2stWbqC1O53AKusTWf0haJsw",
+	"4CgbUXVIfE3/ajPdzv3ywpEXMol8Ln5XdZn/tFOhZGKJOhUIiioCsc8dPFYNSYyeKQWBuEqEc9fZMLJP",
+	"Vo5KYOr2kmwLioNEGQHi52347tphHxKU20AumeNFKAMq2Pjr7UxTA+poKCgZ0yZymRaZfWDkZB25AmNE",
+	"UzyY+Ewp5fkHyv+CCt8is2Q/WLLvrdgb8/bMEiXU1O4udSjlj4LkEfHHBho22JGlBXtmKVS5TfJXyNb4",
+	"Rqa1NFMpzsRTUaEfFY2/GY2R1HGsZLh5b2fC23PAlLTgNjXkJ7+5u7+7a80u1pOB/M7L4nGVu3Y32E2r",
+	"CdIleifxgWwnkNxODCIys+oggQG1WWwkKlitBj3xLmFCTnc6ddwskn45pVCqhkUYWd4abY/S60sb5u51",
+	"nfQN06gslgG3/ttzG/FiBueuZADeAJrLKBgMDnypgzHsPAGCCpwfHLvJEYwGuRrCYRHDCiS5V/gHDfNu",
+	"TW82yGU/aByILvKGpJNYrLMw2Ox7iqoKUing2Fzgs7jqhDIKVBWKbTBq4qC97H5HY9bZmjegaSJdRLVq",
+	"/SJq3QUnS9tujywRzDdEmyYXJuBqz8bkrQ4hn/d5BInI/SYf/N0N+CaWq8oIoOgsly709ly8/NfBC1e/",
+	"vPLXq5e/uPBHL1fCXtsMZn1W/vmLNX+XXCrk3l5jblnTu9bcKneg2xPq5kUn8FhdVIknqe0A/0DFMkzL",
+	"X3bClhz0cokWCZutzSbSbDzJAVVVVJpn73Xl3TdYKVqw1x45P6z/YN9dtqYmrdKvXsakPbNkzT2iZj17",
+	"qG3R7Ub56W5lc5E4mqy7U9Yd0777Ksgkoi2wWHlImFB+zYUhy1SnHpnO/s5L33ljvZ20Xzi/ofr13I76",
+	"6asM9LZ1iPW5gwxCaoqtvzHVe/PWxry9krdm9pIJf97kchoyj/2959b6PWRuu9dvxE2g1XKycIiMBe80",
+	"+tlS5LB5p6O2H9FHvFFnkBRlBOdfpaAs4jwCgdd5SaHHqhrEQvwsgkzsmGMmZsQxbnTuau1KlgZXTRqc",
+	"j8o7aqYYEuew57+Poz8Hk3ViSd+GKHMrd1ZN1/TWVDfLVhUpxGXd5EK82ElTJ3IzXXj+bsF9w1E8QHJY",
+	"CzEWkYxVJ93Cl9EVfkP5LVTYqkl3fDedtbSYTOC76HBmIC7Dce95CPKVo7suCrqVav4S3b5aFWI45O3U",
+	"qEa95hCRv4oK36D8r6iwTbJSvGyUDWtqkSQ0JxN+qZR7b1/+F1IV7+zU49f2s5tc8kiv+QptQu2KmIbU",
+	"SUXMfcbrV4S4GQKxsTySPggbdnsboYsgsooIy6fVUjL8GIkfebU60dEkMvcjCU015izTFoYNAcFQoZ4b",
+	"dHaSrGcQaBpU5F5FGYEt7qnEuv9WeWW38mSBJA03nDO3kyTnCEfsoIN+4fo5966Uv2pkwNoe8Vn4BXDE",
+	"BfavEQdI4EYt9+uez69cPHX2dPcpRZZyAc8Hdwl3m+i50h+4IuQc1336zOlukoMOZD4LuXPc2dPdp7ux",
+	"iq0P47V3YSdGV7DehVTL0hJTii7nyN+uS9gv7NnLT63SdzhJZcee2UPmCk4QB8Sd0S86k3fG8Uzqniwc",
+	"ABrQeyQJO420rCK79Y+fdHe7lQi6G4jis1kJCrinrr9pRNYTHLbhf6wvkwjL6VA23NVhkFCJGZUY5rWE",
+	"ZggCACIQTztff9p0llmSifE/w7NtYYDjDI+IyWhAHQVqQlAMSUzIip4wHDUQF6Qm9MBkRQMkdCUB5VFe",
+	"gmJCy8k6P+ZO+sxJTrpHEICmJaCWMGTe0IcVFf63T76z72cmKUUdgqIIZHcan76vXeRlZwsdVT64eUBM",
+	"qIBkK58m4oV3MOm5Gq+NJzk3mbExsd+RfoFLBIruVbDTu8h8gcw7KL/YEpEXoaYzNDI0MjTGRyM19dxH",
+	"I9Gvk4loaendootLsbxaPWSW3C7ytysbz6or6y2x66r9RAUCmn5eEXNtAbcNvHrFWOP1Kpejso0z9sHY",
+	"B2MfMdnHeLJR/e66MQJy482U8DNHrYJjY0DlM0AHqoZr07Dl4hgINbuFFIDWYz0ZoGGjM/Qa4wOMDzA+",
+	"0D4fwK1IGQJNz7fXZq25X5G5Gbox0Y14+OVUNOSTzk9S06+VgDJkMmR+BMjs0nKygD2iiqY3DX9uYO/0",
+	"TWuy7l5TEgf1rHQvFpy/jS9z3SLxzFboHczJAtVx9kl4Qo2wGgJATvCCALLO4lOKmsiqCr5eQE4nE0OG",
+	"Hvg3/sAhWw7oCYf0+BI9hkeGx5PBozPBP5z0BL1jJChySoKCriWuQ30YT9ItKkxoOq+DhJLCvyQLiss9",
+	"bkBxvBULieIQsXlDLI0eiodU6BmzYcyGMZsPkdkYGlCDJgSFYZykDeC9oMAsAMYEOtLF74ppOozIE3bH",
+	"5HgPv493DD731thlWGVYZQL7mAU2tg3qPf90jtNH/n4iSv6nVCVfBc5pkZWES3oHURqQiYqvD0PNoxNR",
+	"8h1CDAPewWMiw+cSQyBhaCBlSIxZMGbx/jNp6Cj7PGZk7NAQY8Ka4e9fVLHmdWGYkj0zvVnZ3UJmqVx6",
+	"Ul6aqkxM2sUX1ZUlnK9+D5mrxLFO94QFU2GOB7xHr+UH0vaZes84BuMYH496b+jDXeTK82h/nKEP92Rh",
+	"L2l1jGB3BnJHaRPygaoJh5M6fNBfraEPBxeLq4CCwQ3qYi/iVsfmM/HfzmfslLFTxk5B2xBW3KqvFhh2",
+	"mp28y2A8euoKFIUugZekIZ7cEtiM416GotDrtQ1pi2AsK+ES6RQvacAt5yJPSfnqo3vzebTCmIzXD5Yp",
+	"R9GRV2Qe3/48S4vjDgARqu5zXknO3QdckqYI/hvx8dXm8c5kcm1ABp87TefJPYPUzL3L/X29lc1F6xZ+",
+	"/Tm/jfJFXMo6g8wd/IDzBC4w/Ifzp8JM2LipndlBPM6BDqwKdEOVryof6BH5WDgovtOlSYaHVz3evb/3",
+	"s3uZDHlwBleSFmZQ/in+Ydn5ufAbPhI/7e9MVKZfu/WnnmWM8rf336zZM0vIXA6WqUadH3xfzzEpXnV3",
+	"ATHNi2leTPPqSEM2NpeDabmezdFZDr6Q6rh4Tt1tV4zpMKbDmM7HynREPqd13RB5HYxHatnkgTtU2Kuu",
+	"TlWKM6iwR56mqby4u//2CSrs7b+5U51eRPnb+LazIsqbyPweq92/osIDVPgJ5X8NKU99fE5rIyQYqMSl",
+	"a7+tbs4+ziBhH5/7MwTXGd9ifOvDjhOSF44J9MFYVlF1/6RToW9NFlFhGptL75IJ8qA1MrfIQ+0Y7W+J",
+	"4WXd2q4U3oRAfgGP0ZOF/6kp8nH64clA5w1ZlECbMKyztN3JnBKhFryO/aP3yzBUdzCqRV7n60GNcX5a",
+	"0EYj/bU+Mi85TXu10dbo1MGY3uX2SZG7Q1DmsV8sBAkGRgbGf2EwXsfX/sWEI7kjkAGSAZIB8sgBWfdI",
+	"GBWHn3ktTrKYy3sFiRVzMVx1Dq5SiiJ6tiT5OfKClfW18uun1g/P7ZevUWGP+JOqj/es3e9RYQ+Zc/ar",
+	"ZWRuWZPPUX4O5W9bc4+tb37yrlWeQuZGK2eSgyBcqY1frjtYHPfrttJWYyYPuBfVH4AheG8MNF59Hm9c",
+	"CWbw07e1gb1na86d7Y7xWkDccZRUilx3RRko1jjXGINlDJYx2GYMNqpa1mN6x1ot6wziPi93soFAglmG",
+	"UYbRjlKCuoZ41XsGhqoMBd/E6Dtv3dy0Jmfwm1jllb3qwo/u22b4Jrry5Mb+b98hc6F2Q93j19bSDMlt",
+	"In+NVIU+B/r53Hl3MofJxPww6vAYO2DsoBPZARjTgSqTx5LoIbbGSydL1tKiNbtIjKZkIvAsTsm+s7j/",
+	"Zs3PbmxhBl3whj4Bc+jascb2yDrIqgaA5lgXjBUwVtBh2jsN9wTlyCyV/7lkP1xD+dso/wt2dUyhwuPq",
+	"s0fWHROZRewL+X7/3QPr5f1o1POjIID547AGvO6dIQeB5OaqM8uA4Z/hv6UqkHFfKacn2U1vWjNTyFwg",
+	"ZoDr/MT4jwT8Rajpl5xOmQ+NoZChMB4KW90I5YGL3QjFgMeAdwTqLz3OXvNSddqNUEz9ZPjrKPOT9pqa",
+	"fe8VLpC+g/I73lu+dVZmMlE1/279fQ8/m4brP8zt/Z1Fa302Uh3tuDuiWGyLsRDGQtrUnf0kujhK9ADI",
+	"KKPAS6pjyjRDIkPiUQhzOtp6RJFBjUGNQe3ohZ4KRqEGFblJ5njAKTvgt/4AbdvY3l5vFczry0D8UYBY",
+	"8yKWWvQ9UiQg60ZjzXmUn62aOyh/B5leNDZ/m7SpbD5EZtHafmu9W9vfu4/Mb5IJ+x9PrNWH5Lv9nbn9",
+	"N4vI3Ko8KZbXdyPN5gEgKGogmtpZ9nObUWCmMTBm8xEzm2HAS/pwpI7wH/jPvtv7UGI8qzp965B8rem8",
+	"buCfgGxknGkpI9y1cOlnEKFfeV/V2ilDfwOCfoRXGWs5TQcZlzowk1VUPZr3knrZ/9QUGZkla3rXmltF",
+	"+dvk1olkwl5+ar2839+HzO3K5ktkvqs+W0XmK2Quh1hrf6bx2onjSIVpvHHi5PyHZH0sE44xyA4rwM2A",
+	"SN54CRwNXzyOy+U+jKMXvqM5+rkPrHJaS4uosBe8wtT5jVmy1mft1dchrol3wA/iHAfPvKIqKSgB9i4H",
+	"Y5aMWX4U73LUbhLMgK4sr2nXFVXEGp4RxeN7h3k5Da54bY+J07jdk8GYbcq4yb/mu2BBfPJSE7+XIEEg",
+	"6wMghcwFYmkhcxPlZ72fvSyQ/O1WdzHgC8VINOqYwN0jis4gF2RdzZ20FtEwMFMlGPg74bJP/HOXoGRz",
+	"0SzAqzYqlW+9rTxZ8C/+ROaGNbVYKc6US8vJhDU7V11Zt3dmsAeGfLHtFi5OrKP87cr6dOXZm0i20OvM",
+	"4ZheqVKyOTzMcTCFWGGzAHdgMTPGLTqbW3xtQGHkVBYKI1qLu8HL3+5VHzzFHGCl8mwtEvt/cnq8gjs8",
+	"RhEdGIWhjqGuw1DXqj7JwxKrT2LAY8A7NPAiXej23VfV6VvEVU4u5SGyjty+4Wq+NBU5Uvp13hvaeMLM",
+	"1GbchHGTg4jxLhUIvCQYEk8Eedtmt/34ZnV9jpjVrfnLQGC0DqupZFBnUO9AqKtAgFmgRT/XN0AaHPcl",
+	"nWSY91LKSIZmsGWw/bBh60G1Dri+sU3NSKqBtwNvKWC4ZLjsLFxG3VTwYMm+t9I8KoXM5ZYXGoTU5hq8",
+	"O84wZ/Ke8RXGV9qS9ymgAlkAXSKv8xrQtSZS323ak4V9XuOTiB27g7HIMYNap0HNRUwYbCqMjByTN6TL",
+	"pWVreheZW/tv3iFzqvrs0f7uvP1N3rp1z3q0a+/eo4jtAD4h0Hk15/+KO1bB5w7SL6cUBkoGyk4FpWzo",
+	"KnRmEEsE/tFvfRIy0ButD6SgTN6XZOKQIa/DkZdVVF3rEnko5bpuOKZmM58Tbox1TyjlYtmkgYItulXq",
+	"v8LmtjxJPxReBlkVgy6D7ocOXYy+BuCquIQo8nHLtQlrfePs739vLz+nKKsenAdwJwd6iSWlKplD4Tvm",
+	"W4668sFyEUw9xkUYF+k8LqLhV4tODUNNV9Rcs8xO8r7Rf5CGPVnYKwFe5VgyJkPMv/hl8Y3AONKH2RvE",
+	"GLM2GXQ69fYpDeg6lNPR1TrWmzv28nN7JV/O/4pLel9apfALooNuN8d/H4s3EoMZg9mHDTMfWpF5CtbS",
+	"wv7OBDJLVfNF+dti9d68tTFvLz/H7ybM2as7yFxsBrVBfvS40gO9Ud5LwgDDOMN4x2E8KE27AqZbhHrq",
+	"g9jVUU8kVlIDFtNZGdA6GGg6r6aBrrUKjVwlzdpIx/2gAyPuchhaGVo7Cq3XAUwPN0ke+Av5e81NwyIe",
+	"hxLzhJ5MyDO20Vlsw+MTdVwjIOOjoiA1/tHGDRfHIOlZmIVB8qOFZMRDYjXsud6ok0Le0fu8yFLei8fL",
+	"k9hMQjN20CESuuEFD24QaBpU5F5FGYGAO/fVNQemZBjCCeonMchnQEJRYRrKXJIzVIk7x3XxWcgFngK5",
+	"4XEMfCeto6F7/xYzUA7+goS0Ar/wankCvyJV+HVtSNJF4FdazUHm/85bc92XXr5m4Jf4zYJgX+Qdk/Fr",
+	"4/8/AAD//w==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

@@ -81,6 +81,33 @@ func (r users) UpdatePassword(ctx context.Context, id user.ID, hash string) erro
 		"UPDATE credentials SET password_hash = ? WHERE user_id = ? AND provider = 'local'", hash, id))
 }
 
+func (r users) Update(ctx context.Context, u user.User) error {
+	return affectedOne(r.q.exec(ctx, "UPDATE users SET display_name = ?, role = ? WHERE id = ?", u.DisplayName, u.Role, u.ID))
+}
+
+func (r users) UpdateLoginName(ctx context.Context, id user.ID, login string) error {
+	return affectedOne(r.q.exec(ctx,
+		"UPDATE credentials SET subject = ? WHERE user_id = ? AND provider = 'local'", login, id))
+}
+
+func (r users) LoginNames(ctx context.Context) (map[user.ID]string, error) {
+	rows, err := r.q.query(ctx, "SELECT user_id, subject FROM credentials WHERE provider = 'local'")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[user.ID]string{}
+	for rows.Next() {
+		var id user.ID
+		var login string
+		if err := rows.Scan(&id, &login); err != nil {
+			return nil, err
+		}
+		out[id] = login
+	}
+	return out, rows.Err()
+}
+
 func (r users) Delete(ctx context.Context, id user.ID) error {
 	return affectedOne(r.q.exec(ctx, "DELETE FROM users WHERE id = ?", id))
 }
@@ -103,6 +130,11 @@ func (r sessions) Get(ctx context.Context, id string) (port.Session, error) {
 
 func (r sessions) Delete(ctx context.Context, id string) error {
 	_, err := r.q.exec(ctx, "DELETE FROM sessions WHERE id = ?", id)
+	return err
+}
+
+func (r sessions) DeleteForUser(ctx context.Context, id user.ID) error {
+	_, err := r.q.exec(ctx, "DELETE FROM sessions WHERE user_id = ?", id)
 	return err
 }
 

@@ -26,10 +26,16 @@ const (
 	csrfHeader = "X-Mecalo-Request"
 )
 
-type Options struct {
-	LocalAuth bool
+// 有効なログイン方法
+type AuthMethods struct {
+	Local bool
 	// nil: OIDC無効
 	OIDC OIDCProvider
+}
+
+type Options struct {
+	// 設定変更で実行中に変化
+	Auth func() AuthMethods
 	// Secure属性付与, HTTPS配信時は必須
 	SecureCookie bool
 	// Nuxt以外のクライアント向けCORS許可オリジン

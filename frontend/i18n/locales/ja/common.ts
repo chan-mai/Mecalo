@@ -15,6 +15,7 @@ export default {
 		data: 'DATA',
 		about: 'ABOUT',
 		users: 'USERS',
+		admin: 'ADMIN',
 		password: 'PASSWORD',
 		search: 'SEARCH',
 		create: 'CREATE',
@@ -71,5 +72,6 @@ export default {
 		long: 'M月D日(dd)',
 		short: 'M/D',
 		full: 'YYYY/M/D',
+		dateTime: 'YYYY/M/D HH:mm',
 	},
 };

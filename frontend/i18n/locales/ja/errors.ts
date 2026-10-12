@@ -5,6 +5,9 @@ export default {
 		failed: 'ログイン名またはパスワードが違います',
 		oidc: '外部ログインに失敗しました',
 		notRegistered: 'このアカウントは登録されていません',
+		setupToken: '認証に失敗しました。セットアップトークンが一致しません',
+		loginNameTaken: 'このログイン名は使用されています',
+		setupDone: '初期設定は完了しています。ログインしてください',
 	},
 	validation: {
 		required: '入力してください',
