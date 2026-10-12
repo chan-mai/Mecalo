@@ -11,7 +11,7 @@ export default {
 		admin: '管理',
 	},
 	syncStatus: {
-		offline: 'オフラインです。入力は端末に保存し、接続時に同期します',
+		offline: 'サーバーへ接続できませんでした。変更は端末に保存され、通信復帰時に同期されます。',
 		syncing: '同期中 ({count}件)',
 		pending: '未同期 {count}件',
 		failed: '同期できなかった操作 {count}件',
