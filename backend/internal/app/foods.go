@@ -22,7 +22,8 @@ var UserDataset = food.Dataset{
 }
 
 type Foods struct {
-	d Deps
+	d       Deps
+	imports *Imports
 }
 
 type FoodView struct {
@@ -37,6 +38,7 @@ type FoodInput struct {
 	Aliases   []string
 	Barcode   string
 	Nutrients nutrient.Profile
+	Basis     food.Basis
 	Portions  []food.Portion
 }
 
@@ -122,8 +124,14 @@ func (s *Foods) Search(ctx context.Context, uid user.ID, query string, kinds []f
 		}
 	}
 
+	priority, err := s.priorities(ctx)
+	if err != nil {
+		return nil, err
+	}
+	views = dedupe(views, priority)
+
 	score := func(v FoodView) int {
-		sc := counts[v.Food.ID]*10 + linked[v.Food.ID]*200
+		sc := counts[v.Food.ID]*10 + linked[v.Food.ID]*200 + (len(sourceOrder)-priority(v))*5
 		if v.Favorite {
 			sc += 50
 		}
@@ -214,6 +222,61 @@ func (s *Foods) kanjiTerms(words []string) [][]string {
 	return out
 }
 
+// 同一商品の代表を選ぶ順, 先頭ほど優先
+var sourceOrder = []food.DatasetKind{food.DatasetUser, food.DatasetOfficial, food.DatasetTabecal, food.DatasetMEXT, food.DatasetOpenFoodFacts}
+
+// 小さいほど優先
+func (s *Foods) priorities(ctx context.Context) (func(FoodView) int, error) {
+	datasets, err := s.d.Store.Datasets().List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rank := map[food.DatasetID]int{}
+	for _, ds := range datasets {
+		rank[ds.ID] = len(sourceOrder)
+		if i := slices.Index(sourceOrder, ds.Kind); i >= 0 {
+			rank[ds.ID] = i
+		}
+	}
+	return func(v FoodView) int {
+		if !v.Food.IsSystem() {
+			return 0
+		}
+		if r, ok := rank[v.Revision.Source.DatasetID]; ok {
+			return r
+		}
+		return len(sourceOrder)
+	}, nil
+}
+
+// JAN, またはブランドと名前が同じシステム食品を1件へ
+func dedupe(views []FoodView, priority func(FoodView) int) []FoodView {
+	out := make([]FoodView, 0, len(views))
+	at := map[string]int{}
+	for _, v := range views {
+		key := ""
+		switch {
+		case v.Food.Barcode != "":
+			key = "b:" + v.Food.Barcode
+		case v.Food.IsSystem() && v.Revision.Brand != "":
+			key = "n:" + food.SearchKey(v.Revision.Brand) + "|" + food.SearchKey(v.Revision.Name)
+		}
+		if key == "" {
+			out = append(out, v)
+			continue
+		}
+		if i, ok := at[key]; ok {
+			if priority(v) < priority(out[i]) {
+				out[i] = v
+			}
+			continue
+		}
+		at[key] = len(out)
+		out = append(out, v)
+	}
+	return out
+}
+
 func kindAllowed(kinds []food.Kind, k food.Kind) bool {
 	return len(kinds) == 0 || slices.Contains(kinds, k)
 }
@@ -268,7 +331,7 @@ func (s *Foods) Create(ctx context.Context, uid user.ID, in FoodInput) (FoodView
 		ID:        food.ID(s.d.IDs.NewID()),
 		OwnerID:   uid,
 		Kind:      food.KindCustom,
-		Barcode:   strings.TrimSpace(in.Barcode),
+		Barcode:   normalizedBarcode(in.Barcode),
 		CreatedAt: now,
 	}
 	rev := s.newRevision(f.ID, 1, in)
@@ -332,9 +395,9 @@ func (s *Foods) Delete(ctx context.Context, uid user.ID, id food.ID) error {
 
 // ローカルDB優先, 未登録かつ外部照会が有効な場合のみ照会
 func (s *Foods) ByBarcode(ctx context.Context, uid user.ID, code string) (FoodView, error) {
-	code = strings.TrimSpace(code)
-	if code == "" {
-		return FoodView{}, invalid(errors.New("barcode is required"))
+	code, ok := food.NormalizeBarcode(code)
+	if !ok {
+		return FoodView{}, invalid(errors.New("invalid barcode"))
 	}
 	f, rev, err := s.d.Store.Foods().FindByBarcode(ctx, uid, code)
 	if err == nil {
@@ -343,41 +406,27 @@ func (s *Foods) ByBarcode(ctx context.Context, uid user.ID, code string) (FoodVi
 	if !errors.Is(err, ErrNotFound) {
 		return FoodView{}, err
 	}
-	if s.d.Barcode == nil {
+	if s.d.Lookup == nil {
 		return FoodView{}, ErrNotFound
 	}
 
-	product, err := s.d.Barcode.Lookup(ctx, code)
+	sf, err := s.d.Lookup.Lookup(ctx, code)
 	if err != nil {
 		return FoodView{}, err
 	}
-	now := s.d.Clock.Now()
-	f = food.Food{
-		ID:        food.ID(s.d.IDs.NewID()),
-		Kind:      food.KindProduct,
-		Barcode:   code,
-		CreatedAt: now,
+	var id food.ID
+	if _, err := s.imports.upsert(ctx, s.d.Lookup.Dataset(), []SystemFood{sf}, func(fid food.ID) { id = fid }); err != nil {
+		return FoodView{}, err
 	}
-	rev = product.Revision
-	rev.ID = food.RevisionID(s.d.IDs.NewID())
-	rev.FoodID = f.ID
-	rev.Number = 1
-	rev.CreatedAt = now
-	if err := rev.Validate(); err != nil {
-		return FoodView{}, invalid(err)
-	}
-	f.CurrentRevisionID = rev.ID
+	return s.Get(ctx, uid, id)
+}
 
-	err = s.d.Store.InTx(ctx, func(r port.Repositories) error {
-		if err := r.Datasets().Upsert(ctx, s.d.Barcode.Dataset()); err != nil {
-			return err
-		}
-		return r.Foods().Create(ctx, f, rev)
-	})
-	if err != nil {
-		return FoodView{}, err
+// 不正な桁数は入力のまま保存
+func normalizedBarcode(code string) string {
+	if n, ok := food.NormalizeBarcode(code); ok {
+		return n
 	}
-	return FoodView{Food: f, Revision: rev}, nil
+	return strings.TrimSpace(code)
 }
 
 func (s *Foods) SetFavorite(ctx context.Context, uid user.ID, id food.ID, on bool) error {
@@ -433,6 +482,7 @@ func (s *Foods) newRevision(id food.ID, number int, in FoodInput) food.Revision 
 		Brand:     strings.TrimSpace(in.Brand),
 		Aliases:   food.NormalizeAliases(in.Aliases),
 		Nutrients: in.Nutrients,
+		Basis:     in.Basis,
 		Portions:  in.Portions,
 		Source:    food.Source{DatasetID: UserDataset.ID},
 		CreatedAt: s.d.Clock.Now(),

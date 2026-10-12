@@ -27,7 +27,6 @@ import (
 const (
 	DatasetID   = food.DatasetID("openfoodfacts")
 	DefaultBase = "https://world.openfoodfacts.org"
-	userAgent   = "Mecalo/0.1 (self-hosted nutrition tracker; https://github.com/chan-mai/mecalo)"
 	servingUnit = "1食分"
 )
 
@@ -81,6 +80,12 @@ var nutrimentKeys = map[nutrient.Code]string{
 	nutrient.VitaminC:        "vitamin-c_100g",
 }
 
+// 100gあたりの上限, キーはエネルギーか否か
+var maxPer100g = map[bool]decimal.Decimal{
+	true:  decimal.NewFromInt(900),
+	false: decimal.NewFromInt(100),
+}
+
 var gramFactor = map[nutrient.Unit]decimal.Decimal{
 	nutrient.UnitKcal:      decimal.NewFromInt(1),
 	nutrient.UnitGram:      decimal.NewFromInt(1),
@@ -104,21 +109,24 @@ func (p Product) ToSystemFood() (app.SystemFood, bool) {
 	if name == "" {
 		name = strings.TrimSpace(p.ProductName)
 	}
-	if name == "" || !barcodePattern.MatchString(p.Code) {
+	code, ok := food.NormalizeBarcode(p.Code)
+	if name == "" || !ok {
 		return app.SystemFood{}, false
 	}
 	sf := app.SystemFood{
-		ID:        food.ID("off-" + p.Code),
+		ID:        food.SystemID("off", code),
 		Kind:      food.KindProduct,
-		Barcode:   p.Code,
+		Barcode:   code,
 		Name:      name,
 		Brand:     firstBrand(p.Brands),
-		Reference: p.Code,
+		Reference: code,
 		Nutrients: nutrient.Profile{},
+		URL:       DefaultBase + "/product/" + code,
 	}
 	for code, key := range nutrimentKeys {
 		v, ok := number(p.Nutriments[key])
-		if !ok || v.IsNegative() {
+		// 100gあたりで成立しない値は入力誤りとして除外
+		if !ok || v.IsNegative() || v.GreaterThan(maxPer100g[code == nutrient.Energy]) {
 			continue
 		}
 		def, _ := nutrient.Lookup(code)
@@ -153,72 +161,64 @@ func number(raw json.RawMessage) (decimal.Decimal, bool) {
 
 // 外部照会, 利用者のスキャン1回につき1リクエスト
 type Client struct {
-	Base string
-	HTTP *http.Client
+	Base      string
+	UserAgent string
+	HTTP      *http.Client
 }
 
-var _ port.BarcodeLookup = (*Client)(nil)
+var _ port.ProductLookup = (*Client)(nil)
 
-func NewClient(base string) *Client {
+func NewClient(base, userAgent string) *Client {
 	if base == "" {
 		base = DefaultBase
 	}
-	return &Client{Base: strings.TrimRight(base, "/"), HTTP: &http.Client{Timeout: 10 * time.Second}}
+	return &Client{Base: strings.TrimRight(base, "/"), UserAgent: userAgent, HTTP: &http.Client{Timeout: 10 * time.Second}}
 }
 
 func (c *Client) Dataset() food.Dataset {
 	return Dataset()
 }
 
-func (c *Client) Lookup(ctx context.Context, barcode string) (port.ExternalProduct, error) {
+func (c *Client) Lookup(ctx context.Context, barcode string) (app.SystemFood, error) {
 	if !barcodePattern.MatchString(barcode) {
-		return port.ExternalProduct{}, port.ErrNotFound
+		return app.SystemFood{}, port.ErrNotFound
 	}
 	fields := "code,product_name,product_name_ja,brands,serving_quantity,nutriments"
 	u := fmt.Sprintf("%s/api/v2/product/%s.json?fields=%s", c.Base, url.PathEscape(barcode), fields)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
-		return port.ExternalProduct{}, err
+		return app.SystemFood{}, err
 	}
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", c.UserAgent)
 	res, err := c.HTTP.Do(req)
 	if err != nil {
-		return port.ExternalProduct{}, err
+		return app.SystemFood{}, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode == http.StatusNotFound {
-		return port.ExternalProduct{}, port.ErrNotFound
+		return app.SystemFood{}, port.ErrNotFound
 	}
 	if res.StatusCode != http.StatusOK {
-		return port.ExternalProduct{}, fmt.Errorf("open food facts: status %d", res.StatusCode)
+		return app.SystemFood{}, fmt.Errorf("open food facts: status %d", res.StatusCode)
 	}
 	var body struct {
 		Status  int     `json:"status"`
 		Product Product `json:"product"`
 	}
 	if err := json.NewDecoder(io.LimitReader(res.Body, 4<<20)).Decode(&body); err != nil {
-		return port.ExternalProduct{}, err
+		return app.SystemFood{}, err
 	}
 	if body.Status != 1 {
-		return port.ExternalProduct{}, port.ErrNotFound
+		return app.SystemFood{}, port.ErrNotFound
 	}
 	if body.Product.Code == "" {
 		body.Product.Code = barcode
 	}
 	sf, ok := body.Product.ToSystemFood()
 	if !ok {
-		return port.ExternalProduct{}, port.ErrNotFound
+		return app.SystemFood{}, port.ErrNotFound
 	}
-	return port.ExternalProduct{
-		Barcode: sf.Barcode,
-		Revision: food.Revision{
-			Name:      sf.Name,
-			Brand:     sf.Brand,
-			Nutrients: sf.Nutrients,
-			Portions:  sf.Portions,
-			Source:    food.Source{DatasetID: DatasetID, Reference: sf.Reference},
-		},
-	}, nil
+	return sf, nil
 }
 
 // JSONLダンプ(gzip可)から指定国の商品を抽出

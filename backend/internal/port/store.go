@@ -40,6 +40,7 @@ type Repositories interface {
 	QueryLinks() QueryLinkRepository
 	Settings() SettingsRepository
 	Weights() WeightRepository
+	Sources() SourceRepository
 }
 
 type Credential struct {
@@ -112,6 +113,8 @@ type FoodRepository interface {
 	Search(ctx context.Context, q FoodSearchQuery) ([]FoodHit, error)
 	ListOwned(ctx context.Context, owner user.ID) ([]FoodHit, error)
 	SoftDelete(ctx context.Context, id food.ID, at time.Time) error
+	// nilで販売終了を解除
+	SetDiscontinued(ctx context.Context, id food.ID, at *time.Time) error
 }
 
 type RecipeRepository interface {

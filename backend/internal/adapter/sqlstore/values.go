@@ -52,6 +52,17 @@ func (c nullTimeCol) Scan(src any) error {
 	return nil
 }
 
+// NULLはゼロ値
+type zeroTimeCol struct{ t *time.Time }
+
+func (c zeroTimeCol) Scan(src any) error {
+	if src == nil {
+		*c.t = time.Time{}
+		return nil
+	}
+	return timeCol(c).Scan(src)
+}
+
 type dateCol struct{ d *calendar.Date }
 
 func (c dateCol) Scan(src any) error {

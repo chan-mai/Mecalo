@@ -27,6 +27,10 @@ type config struct {
 	OIDCAutoCreate  bool           `env:"MECALO_OIDC_AUTO_PROVISION"`
 	OFFLookup       bool           `env:"MECALO_OPENFOODFACTS_LOOKUP"`
 	OFFBaseURL      string         `env:"MECALO_OPENFOODFACTS_URL"`
+	Sources         []string       `env:"MECALO_SOURCES"`
+	TabecalKey      string         `env:"MECALO_TABECAL_KEY"`
+	SyncInterval    time.Duration  `env:"MECALO_SYNC_INTERVAL" envDefault:"168h"`
+	FetchUserAgent  string         `env:"MECALO_FETCH_USER_AGENT"`
 }
 
 func (c config) LocalAuth() bool   { return slices.Contains(c.AuthProviders, "local") }

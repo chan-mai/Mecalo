@@ -38,8 +38,14 @@ type Deps struct {
 	// nilは読みでの照合なし
 	Reader port.TextReader
 	// nilは外部照会無効
-	Barcode port.BarcodeLookup
-	Hasher  port.PasswordHasher
+	Lookup port.ProductLookup
+	// 利用者操作時のみ使う外部検索
+	Finders []port.FoodFinder
+	// 定期同期する商品一覧
+	Catalogs []port.Catalog
+	// 同期の経過の通知先, nilは通知なし
+	OnSync func(SyncEvent)
+	Hasher port.PasswordHasher
 }
 
 // 全ユースケース
@@ -53,6 +59,7 @@ type App struct {
 	Weights  *Weights
 	Exports  *Exports
 	Imports  *Imports
+	Sources  *Sources
 }
 
 type Options struct {
@@ -61,16 +68,18 @@ type Options struct {
 }
 
 func New(d Deps, opt Options) *App {
+	imports := &Imports{d: d}
 	return &App{
 		Accounts: &Accounts{d: d, opt: opt},
-		Foods:    &Foods{d: d},
+		Foods:    &Foods{d: d, imports: imports},
 		Meals:    &Meals{d: d},
 		Recipes:  &Recipes{d: d},
 		Reports:  &Reports{d: d},
 		Settings: &SettingsService{d: d},
 		Weights:  &Weights{d: d},
 		Exports:  &Exports{d: d},
-		Imports:  &Imports{d: d},
+		Imports:  imports,
+		Sources:  &Sources{d: d, imports: imports},
 	}
 }
 

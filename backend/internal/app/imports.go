@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"time"
 
 	"github.com/chan-mai/mecalo/backend/internal/domain/food"
-	"github.com/chan-mai/mecalo/backend/internal/domain/nutrient"
 	"github.com/chan-mai/mecalo/backend/internal/port"
 )
 
@@ -16,17 +16,7 @@ type Imports struct {
 }
 
 // 取込元での1食品
-type SystemFood struct {
-	ID        food.ID
-	Kind      food.Kind
-	Barcode   string
-	Name      string
-	Brand     string
-	Aliases   []string
-	Reference string
-	Nutrients nutrient.Profile
-	Portions  []food.Portion
-}
+type SystemFood = port.SystemFood
 
 type ImportStats struct {
 	Created   int
@@ -38,6 +28,11 @@ const importBatchSize = 200
 
 // 内容が変わった食品のみ新リビジョン追加, 既存記録不変
 func (s *Imports) Upsert(ctx context.Context, ds food.Dataset, foods []SystemFood) (ImportStats, error) {
+	return s.upsert(ctx, ds, foods, nil)
+}
+
+// 保存先の食品IDをseenへ通知
+func (s *Imports) upsert(ctx context.Context, ds food.Dataset, foods []SystemFood, seen func(food.ID)) (ImportStats, error) {
 	var stats ImportStats
 	if ds.ImportedAt.IsZero() {
 		ds.ImportedAt = s.d.Clock.Now()
@@ -49,9 +44,12 @@ func (s *Imports) Upsert(ctx context.Context, ds food.Dataset, foods []SystemFoo
 		batch := foods[start:min(start+importBatchSize, len(foods))]
 		err := s.d.Store.InTx(ctx, func(r port.Repositories) error {
 			for _, sf := range batch {
-				res, err := s.upsertOne(ctx, r, ds, sf)
+				id, res, err := s.upsertOne(ctx, r, ds, sf)
 				if err != nil {
 					return err
+				}
+				if seen != nil {
+					seen(id)
 				}
 				switch res {
 				case created:
@@ -79,44 +77,65 @@ const (
 	updated
 )
 
-func (s *Imports) upsertOne(ctx context.Context, r port.Repositories, ds food.Dataset, sf SystemFood) (upsertResult, error) {
+func (s *Imports) upsertOne(ctx context.Context, r port.Repositories, ds food.Dataset, sf SystemFood) (food.ID, upsertResult, error) {
 	now := s.d.Clock.Now()
-	rev := food.Revision{
-		ID:        food.RevisionID(s.d.IDs.NewID()),
+	sf.Barcode, _ = food.NormalizeBarcode(sf.Barcode)
+	rev := systemRevision(food.RevisionID(s.d.IDs.NewID()), ds, sf, now)
+	if err := rev.Validate(); err != nil {
+		return "", unchanged, invalid(err)
+	}
+
+	f, cur, err := r.Foods().Get(ctx, "", sf.ID)
+	// 旧形式IDで登録済みの同一商品
+	if errors.Is(err, ErrNotFound) && sf.Reference != "" {
+		f, cur, err = r.Foods().FindBySource(ctx, ds.ID, sf.Reference)
+	}
+	if errors.Is(err, ErrNotFound) {
+		f = food.Food{ID: sf.ID, Kind: sf.Kind, Barcode: sf.Barcode, CurrentRevisionID: rev.ID, CreatedAt: now}
+		return f.ID, created, r.Foods().Create(ctx, f, rev)
+	}
+	if err != nil {
+		return "", unchanged, err
+	}
+	if !f.IsSystem() {
+		return "", unchanged, ErrConflict
+	}
+	if f.Discontinued() {
+		if err := r.Foods().SetDiscontinued(ctx, f.ID, nil); err != nil {
+			return "", unchanged, err
+		}
+	}
+	rev.FoodID = f.ID
+	if sameContent(cur, rev) {
+		return f.ID, unchanged, nil
+	}
+	rev.Number = cur.Number + 1
+	return f.ID, updated, r.Foods().AddRevision(ctx, rev)
+}
+
+func systemRevision(id food.RevisionID, ds food.Dataset, sf SystemFood, now time.Time) food.Revision {
+	return food.Revision{
+		ID:        id,
 		FoodID:    sf.ID,
 		Number:    1,
 		Name:      sf.Name,
 		Brand:     sf.Brand,
 		Aliases:   food.NormalizeAliases(sf.Aliases),
 		Nutrients: sf.Nutrients,
+		Basis:     sf.Basis,
 		Portions:  sf.Portions,
-		Source:    food.Source{DatasetID: ds.ID, Reference: sf.Reference},
+		Source:    food.Source{DatasetID: ds.ID, Reference: sf.Reference, URL: sf.URL, RetrievedAt: now},
 		CreatedAt: now,
 	}
-	if err := rev.Validate(); err != nil {
-		return unchanged, invalid(err)
-	}
+}
 
-	f, cur, err := r.Foods().Get(ctx, "", sf.ID)
-	if errors.Is(err, ErrNotFound) {
-		f = food.Food{ID: sf.ID, Kind: sf.Kind, Barcode: sf.Barcode, CurrentRevisionID: rev.ID, CreatedAt: now}
-		return created, r.Foods().Create(ctx, f, rev)
-	}
-	if err != nil {
-		return unchanged, err
-	}
-	if !f.IsSystem() {
-		return unchanged, ErrConflict
-	}
-	if sameContent(cur, rev) {
-		return unchanged, nil
-	}
-	rev.Number = cur.Number + 1
-	return updated, r.Foods().AddRevision(ctx, rev)
+// 取込前の検証
+func (s *Imports) valid(ds food.Dataset, sf SystemFood) bool {
+	return sf.ID != "" && sf.Reference != "" && systemRevision("", ds, sf, time.Time{}).Validate() == nil
 }
 
 func sameContent(a, b food.Revision) bool {
-	if a.Name != b.Name || a.Brand != b.Brand || !slices.Equal(a.Aliases, b.Aliases) || len(a.Nutrients) != len(b.Nutrients) || len(a.Portions) != len(b.Portions) {
+	if a.Name != b.Name || a.Brand != b.Brand || a.Basis.Unit != b.Basis.Unit || !a.Basis.Grams.Equal(b.Basis.Grams) || !slices.Equal(a.Aliases, b.Aliases) || len(a.Nutrients) != len(b.Nutrients) || len(a.Portions) != len(b.Portions) {
 		return false
 	}
 	for code, va := range a.Nutrients {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/url"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -181,6 +182,15 @@ func (r repos) SearchHistory() port.SearchHistoryRepository { return searchHisto
 func (r repos) QueryLinks() port.QueryLinkRepository        { return queryLinks(r) }
 func (r repos) Settings() port.SettingsRepository           { return settings(r) }
 func (r repos) Weights() port.WeightRepository              { return weights(r) }
+func (r repos) Sources() port.SourceRepository              { return sources(r) }
+
+// ゼロ値はNULL
+func nullTimeArg(d dialect, t time.Time) any {
+	if t.IsZero() {
+		return nil
+	}
+	return d.timeValue(t)
+}
 
 func notFound(err error) error {
 	if errors.Is(err, sql.ErrNoRows) {
