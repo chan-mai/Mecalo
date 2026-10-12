@@ -1,12 +1,13 @@
 import * as v from 'valibot';
 import type { Schemas } from '~/composables/api/client';
+import { latestBirthDate } from '~/utils/date';
 
 const isoDate = v.pipe(v.string(), v.isoDate('errors.validation.date'));
 const optionalNumber = v.optional(v.pipe(v.number('errors.validation.number'), v.minValue(0, 'errors.validation.positive')));
 
 export const profileSchema = v.object({
 	sex: v.picklist(['male', 'female']),
-	birthDate: isoDate,
+	birthDate: v.pipe(isoDate, v.check((d) => d <= latestBirthDate(), 'errors.validation.birthDate')),
 	heightCm: v.pipe(v.number('errors.validation.number'), v.gtValue(0, 'errors.validation.positive')),
 	activity: v.picklist(['low', 'moderate', 'high']),
 	goal: v.picklist(['lose', 'maintain', 'gain']),

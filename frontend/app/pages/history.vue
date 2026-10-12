@@ -111,7 +111,7 @@ async function deleteWeight(date: string) {
 		<p v-else class="text-sm text-muted">{{ t('pages.history.noWeights') }}</p>
 
 		<form class="mt-3 grid grid-cols-[1fr_1fr_auto] items-end gap-2" novalidate @submit.prevent="saveWeight">
-			<FormField v-slot="{ field }" :label="t('terms.date')"><input v-bind="field" v-model="weightForm.date" type="date" class="input" :max="today"></FormField>
+			<FormField v-slot="{ field }" :label="t('terms.date')"><DateField v-bind="field" v-model="weightForm.date" :max="today"/></FormField>
 			<FormField v-slot="{ field }" :label="t('terms.weightKg')" :error="errors.kg"><input v-bind="field" v-model.number="weightForm.kg" type="number" inputmode="decimal" step="0.1" class="input"></FormField>
 			<button class="btn btn-primary">{{ t('common.save') }}</button>
 		</form>

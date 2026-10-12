@@ -18,6 +18,7 @@ export default {
 		date: '日付を入力してください',
 		range: '下限は上限以下にしてください',
 		maxLength: '長すぎます',
+		birthDate: '1歳未満は利用できません',
 	},
 	offlineUnavailable: 'この操作はオンライン時のみ利用できます',
 };

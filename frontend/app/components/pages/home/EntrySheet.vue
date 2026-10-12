@@ -124,10 +124,10 @@ async function run(fn: (id: string) => Promise<boolean>, message: string) {
 		<QuantityForm :key="entry.id" :food="snapshotFood" :initial="entry.quantity" :busy="busy" :submitLabel="t('common.save')" @submit="save">
 			<template #extra>
 				<div class="grid grid-cols-2 gap-2">
-					<label>
-						<span class="mb-1 block text-sm text-muted">{{ t('terms.date') }}</span>
-						<input v-model="date" type="date" class="input" required>
-					</label>
+					<div>
+						<span :id="`${uid}-date`" class="mb-1 block text-sm text-muted">{{ t('terms.date') }}</span>
+						<DateField v-model="date" :aria-labelledby="`${uid}-date`"/>
+					</div>
 					<div>
 						<span :id="`${uid}-slot`" class="mb-1 block text-sm text-muted">{{ t('terms.mealSlot') }}</span>
 						<SelectField v-model="slot" :labelledby="`${uid}-slot`" :options="slots.map((s) => ({ value: s, label: t(`terms.slot.${s}`) }))"/>

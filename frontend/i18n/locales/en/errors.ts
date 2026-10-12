@@ -20,6 +20,7 @@ export default {
 		date: 'Enter a date',
 		range: 'Min must not exceed max',
 		maxLength: 'Too long',
+		birthDate: 'Not available for children under 1 year old',
 	},
 	offlineUnavailable: 'This action is only available online',
 } satisfies typeof ja;
