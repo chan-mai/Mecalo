@@ -156,3 +156,14 @@ func Sum(parts []Part) Profile {
 	}
 	return out
 }
+
+// 重量不明時の充足率の重み, 主要成分の合計重量
+func MacroMass(p Profile) decimal.Decimal {
+	sum := decimal.Zero
+	for _, code := range []Code{Protein, Fat, Carbohydrate, SaltEquivalent} {
+		if v := p.Get(code); v.Known() {
+			sum = sum.Add(v.Amount)
+		}
+	}
+	return sum
+}

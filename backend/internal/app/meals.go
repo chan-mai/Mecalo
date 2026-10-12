@@ -297,6 +297,9 @@ func (s *Meals) pick(ctx context.Context, uid user.ID, id food.ID, q food.Quanti
 }
 
 func defaultQuantity(rev food.Revision) food.Quantity {
+	if rev.Basis.PerUnit() {
+		return food.Quantity{Amount: one, Unit: rev.Basis.Unit}
+	}
 	if len(rev.Portions) > 0 {
 		return food.Quantity{Amount: one, Unit: rev.Portions[0].Unit}
 	}
