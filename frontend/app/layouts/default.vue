@@ -1,12 +1,20 @@
 <script setup lang="ts">
 const { t } = useI18n();
+const { me } = useAuth();
+const route = useRoute();
 
-const items = [
+const items = computed(() => [
 	{ to: '/', icon: 'lucide:house', label: 'layout.nav.home' },
 	{ to: '/history', icon: 'lucide:chart-column', label: 'layout.nav.history' },
 	{ to: '/foods', icon: 'lucide:salad', label: 'layout.nav.foods' },
 	{ to: '/settings', icon: 'lucide:settings', label: 'layout.nav.settings' },
-] as const;
+	...(me.value?.role === 'admin' ? [{ to: '/admin', icon: 'lucide:shield', label: 'layout.nav.admin' }] : []),
+]);
+
+// 配下の画面でも選択表示
+function active(to: string): boolean {
+	return to === '/' ? route.path === '/' : route.path === to || route.path.startsWith(`${to}/`);
+}
 </script>
 
 <template>
@@ -23,12 +31,13 @@ const items = [
 		class="nav-bar panel fixed z-30 px-2 py-1.5"
 		:aria-label="t('layout.nav.label')"
 	>
-		<ul class="grid h-full grid-cols-4 items-center">
+		<ul class="grid h-full items-center" :style="{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }">
 			<li v-for="item in items" :key="item.to">
 				<NuxtLink
 					:to="item.to"
 					class="press flex flex-col items-center gap-0.5 py-1 text-[10px] tracking-[0.08em] text-muted"
-					activeClass="nav-active !text-primary-ink"
+					:class="{ 'nav-active !text-primary-ink': active(item.to) }"
+					:aria-current="active(item.to) ? 'page' : undefined"
 				>
 					<span class="nav-icon"><Icon :name="item.icon" size="20" aria-hidden="true"/></span>
 					{{ t(item.label) }}

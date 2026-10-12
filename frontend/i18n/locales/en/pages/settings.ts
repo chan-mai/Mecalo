@@ -28,8 +28,6 @@ export default {
 		logoutConfirm: 'Log out?',
 		links: {
 			about: 'Data sources and licenses',
-			users: 'Manage users',
-			sources: 'External data sources',
 			weight: 'Weight trend',
 			data: 'Export and import',
 			password: 'Change password',
@@ -58,6 +56,13 @@ export default {
 		software: 'Software',
 		license: 'Mecalo is released under AGPL-3.0',
 		offAttribution: 'Open Food Facts data is available under the ODbL',
+	},
+	adminIndex: {
+		title: 'Admin',
+		items: {
+			users: { title: 'Users', description: 'Create and delete users, and set their roles' },
+			sources: { title: 'External data integration', description: 'Check sync status and sync manually' },
+		},
 	},
 	adminSources: {
 		title: 'External data sources',

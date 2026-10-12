@@ -26,8 +26,6 @@ export default {
 		logoutConfirm: 'ログアウトしますか',
 		links: {
 			about: 'データの出典とライセンス',
-			users: '利用者の管理',
-			sources: '外部データの取得元',
 			weight: '体重の推移',
 			data: 'データのエクスポート・取込',
 			password: 'パスワード変更',
@@ -56,6 +54,13 @@ export default {
 		software: 'ソフトウェア',
 		license: 'MecaloはAGPL-3.0で公開されています',
 		offAttribution: 'Open Food FactsのデータはODbLで提供されています',
+	},
+	adminIndex: {
+		title: '管理',
+		items: {
+			users: { title: '利用者', description: '利用者の作成・削除と権限' },
+			sources: { title: '外部データ連携', description: '同期状態の確認と手動同期' },
+		},
 	},
 	adminSources: {
 		title: '外部データの取得元',

@@ -10,6 +10,7 @@ export default {
 		history: 'History',
 		foods: 'Foods',
 		settings: 'Settings',
+		admin: 'Admin',
 	},
 	syncStatus: {
 		offline: 'You are offline. Changes are saved on this device and synced when you reconnect',

@@ -4,6 +4,8 @@ import type { Schemas } from '~/composables/api/client';
 import { ApiError, unwrap, useApi } from '~/composables/api/client';
 import { formatDate } from '~/utils/date';
 
+definePageMeta({ middleware: 'admin' });
+
 const { t, locale } = useI18n();
 const onError = useErrorHandler();
 const api = useApi();
@@ -31,7 +33,7 @@ async function sync(s: Schemas['Source']) {
 
 <template>
 <div class="space-y-4">
-	<PageHeader back="/settings" :title="t('pages.adminSources.title')" :eyebrow="t('common.eyebrow.data')"/>
+	<PageHeader back="/admin" :title="t('pages.adminSources.title')" :eyebrow="t('common.eyebrow.data')"/>
 	<p class="text-sm text-muted">{{ t('pages.adminSources.note') }}</p>
 	<p v-if="sources && sources.length === 0" class="panel p-6 text-sm text-muted">{{ t('pages.adminSources.empty') }}</p>
 	<ul v-else class="panel divide-y divide-[var(--hairline)]">

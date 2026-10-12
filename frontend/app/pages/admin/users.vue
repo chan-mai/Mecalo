@@ -4,6 +4,8 @@ import type { Schemas } from '~/composables/api/client';
 import { unwrap, useApi } from '~/composables/api/client';
 import { signUpSchema } from '~/schemas/auth';
 
+definePageMeta({ middleware: 'admin' });
+
 const { t } = useI18n();
 const confirmDelete = useConfirmDelete();
 const { me } = useAuth();
@@ -42,7 +44,7 @@ async function remove(id: string) {
 
 <template>
 <div class="space-y-4">
-	<PageHeader back="/settings" :title="t('pages.admin.title')" :eyebrow="t('common.eyebrow.users')"/>
+	<PageHeader back="/admin" :title="t('pages.admin.title')" :eyebrow="t('common.eyebrow.users')"/>
 	<ul class="panel divide-y divide-[var(--hairline)]">
 		<li v-for="u in users ?? []" :key="u.id" class="flex items-center justify-between px-4 py-2 text-sm">
 			<span>{{ u.displayName }} <span class="text-xs text-muted">{{ t(`terms.role.${u.role}`) }}</span></span>

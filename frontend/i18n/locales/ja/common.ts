@@ -15,6 +15,7 @@ export default {
 		data: 'DATA',
 		about: 'ABOUT',
 		users: 'USERS',
+		admin: 'ADMIN',
 		password: 'PASSWORD',
 		search: 'SEARCH',
 		create: 'CREATE',
