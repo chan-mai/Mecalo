@@ -41,11 +41,11 @@ internal/domain/*    純粋ロジック
 | `adapter/httpapi` | 生成型と app 型の変換, 認証・CSRF・CORS |
 | `adapter/sqlstore` | 両DB共通の SQL 実装。方言差分は `dialect.go` のみ |
 | `adapter/dri` | 食事摂取基準 YAML の読込 |
-| `adapter/foodsource/mext`, `adapter/foodsource/openfoodfacts` | 外部データの変換 |
-| `adapter/foodsource/tabecal` | 外部検索(タベカル) |
-| `adapter/foodsource/official` | 公式サイトの商品一覧の同期。取得元は`registry.go`へ登録し、商品ページの巡回は`detail.go`の共通処理を利用 |
-| `adapter/foodsource/extract` | 栄養成分表示・HTML・PDFの表の解析の共通部品 |
-| `adapter/foodsource/webfetch` | 外部サイト取得の共通処理(robots.txt, 間隔制御, 条件付きGET) |
+| `adapter/mext`, `adapter/openfoodfacts` | 外部データの変換 |
+| `adapter/tabecal` | 外部検索(タベカル) |
+| `adapter/official` | 公式サイトの商品一覧の同期 |
+| `adapter/catalog` | 栄養成分表示・HTMLの解析の共通部品 |
+| `adapter/webfetch` | 外部サイト取得の共通処理(robots.txt, 間隔制御, 条件付きGET) |
 
 ## フロントエンドの構成
 

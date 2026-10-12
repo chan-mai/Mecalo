@@ -5,10 +5,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/official"
-	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/openfoodfacts"
-	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/tabecal"
-	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/webfetch"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/official"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/openfoodfacts"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/tabecal"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/webfetch"
 	"github.com/chan-mai/mecalo/backend/internal/app"
 )
 
@@ -16,12 +16,12 @@ import (
 var version = "0.1.0"
 
 // MECALO_SOURCESに指定できる取得元
-func sourceNames() []string {
-	names := []string{"openfoodfacts", "openfoodfacts-delta", "tabecal"}
-	for _, e := range official.Registry {
-		names = append(names, e.Name)
-	}
-	return names
+var sourceNames = []string{
+	"openfoodfacts", "openfoodfacts-delta", "tabecal",
+	"topvalu", "familymart", "seven-eleven", "lawson",
+	"mcdonalds", "starbucks", "mos", "ringerhut", "ootoya", "skylark", "saizeriya",
+	"sushiro", "kurasushi", "godiva", "kourakuen", "matsunoya", "kiyoken", "cozycorner", "horai551",
+	"dennys", "steakdon", "tonden", "burgerking", "bigboy", "doutor", "saintmarc",
 }
 
 func configureSources(cfg config, deps *app.Deps) error {
@@ -30,7 +30,7 @@ func configureSources(cfg config, deps *app.Deps) error {
 		names = append(names, "openfoodfacts")
 	}
 	if slices.ContainsFunc(names, func(n string) bool { return strings.EqualFold(strings.TrimSpace(n), "all") }) {
-		names = sourceNames()
+		names = sourceNames
 	}
 	ua := cfg.FetchUserAgent
 	if ua == "" {
@@ -51,13 +51,60 @@ func configureSources(cfg config, deps *app.Deps) error {
 			deps.Catalogs = append(deps.Catalogs, &openfoodfacts.Delta{Fetch: fetch})
 		case "tabecal":
 			deps.Finders = append(deps.Finders, tabecal.New("", cfg.TabecalKey, fetch.UserAgent))
+		case "topvalu":
+			deps.Catalogs = append(deps.Catalogs, &official.Topvalu{Fetch: fetch})
+		case "familymart":
+			deps.Catalogs = append(deps.Catalogs, &official.FamilyMart{Fetch: fetch})
+		case "seven-eleven":
+			deps.Catalogs = append(deps.Catalogs, &official.SevenEleven{Fetch: fetch})
+		case "lawson":
+			deps.Catalogs = append(deps.Catalogs, &official.Lawson{Fetch: fetch})
+		case "mcdonalds":
+			deps.Catalogs = append(deps.Catalogs, &official.McDonalds{Fetch: fetch})
+		case "starbucks":
+			deps.Catalogs = append(deps.Catalogs, &official.Starbucks{Fetch: fetch})
+		case "mos":
+			deps.Catalogs = append(deps.Catalogs, &official.Mos{Fetch: fetch})
+		case "ringerhut":
+			deps.Catalogs = append(deps.Catalogs, official.RingerHut(fetch))
+		case "ootoya":
+			deps.Catalogs = append(deps.Catalogs, official.Ootoya(fetch))
+		case "skylark":
+			deps.Catalogs = append(deps.Catalogs, &official.Skylark{Fetch: fetch})
+		case "saizeriya":
+			deps.Catalogs = append(deps.Catalogs, &official.Saizeriya{Fetch: fetch})
+		case "sushiro":
+			deps.Catalogs = append(deps.Catalogs, &official.Sushiro{Fetch: fetch})
+		case "kurasushi":
+			deps.Catalogs = append(deps.Catalogs, &official.KuraSushi{Fetch: fetch})
+		case "godiva":
+			deps.Catalogs = append(deps.Catalogs, &official.Godiva{Fetch: fetch})
+		case "kourakuen":
+			deps.Catalogs = append(deps.Catalogs, &official.Kourakuen{Fetch: fetch})
+		case "matsunoya":
+			deps.Catalogs = append(deps.Catalogs, &official.Matsunoya{Fetch: fetch})
+		case "kiyoken":
+			deps.Catalogs = append(deps.Catalogs, &official.Kiyoken{Fetch: fetch})
+		case "cozycorner":
+			deps.Catalogs = append(deps.Catalogs, &official.CozyCorner{Fetch: fetch})
+		case "horai551":
+			deps.Catalogs = append(deps.Catalogs, &official.Horai551{Fetch: fetch})
+		case "dennys":
+			deps.Catalogs = append(deps.Catalogs, official.Dennys(fetch))
+		case "steakdon":
+			deps.Catalogs = append(deps.Catalogs, official.SteakDon(fetch))
+		case "tonden":
+			deps.Catalogs = append(deps.Catalogs, official.Tonden(fetch))
+		case "burgerking":
+			deps.Catalogs = append(deps.Catalogs, official.BurgerKing(fetch))
+		case "bigboy":
+			deps.Catalogs = append(deps.Catalogs, &official.BigBoy{Fetch: fetch})
+		case "doutor":
+			deps.Catalogs = append(deps.Catalogs, &official.Doutor{Fetch: fetch})
+		case "saintmarc":
+			deps.Catalogs = append(deps.Catalogs, &official.SaintMarc{Fetch: fetch})
 		default:
-			i := slices.IndexFunc(official.Registry, func(e official.Entry) bool { return e.Name == name })
-			if i >= 0 {
-				deps.Catalogs = append(deps.Catalogs, official.Registry[i].New(fetch))
-				continue
-			}
-			return fmt.Errorf("unknown source %q in MECALO_SOURCES (available: all, %s)", raw, strings.Join(sourceNames(), ", "))
+			return fmt.Errorf("unknown source %q in MECALO_SOURCES (available: all, %s)", raw, strings.Join(sourceNames, ", "))
 		}
 	}
 	return nil
