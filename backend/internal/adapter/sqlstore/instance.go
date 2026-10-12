@@ -21,8 +21,8 @@ func (r instance) List(ctx context.Context) (map[string]string, error) {
 	return out, err
 }
 
-func (r instance) Put(ctx context.Context, values map[string]string) error {
-	now := r.d.timeValue(time.Now())
+func (r instance) Put(ctx context.Context, values map[string]string, at time.Time) error {
+	now := r.d.timeValue(at)
 	for k, v := range values {
 		_, err := r.q.exec(ctx, `
 			INSERT INTO instance_settings (key, value, updated_at) VALUES (?, ?, ?)

@@ -64,14 +64,15 @@ type ApplyFunc func(ctx context.Context, values map[string]string) (commit func(
 // 管理者がWebUIから変更する設定, 値はWebUI > 環境変数 > 既定値の順
 type Instance struct {
 	store port.Store
+	clock port.Clock
 	defs  []SettingDef
 	env   map[string]string
 	apply ApplyFunc
 	mu    sync.Mutex
 }
 
-func NewInstance(store port.Store, defs []SettingDef, env map[string]string, apply ApplyFunc) *Instance {
-	return &Instance{store: store, defs: defs, env: env, apply: apply}
+func NewInstance(store port.Store, clock port.Clock, defs []SettingDef, env map[string]string, apply ApplyFunc) *Instance {
+	return &Instance{store: store, clock: clock, defs: defs, env: env, apply: apply}
 }
 
 // 起動時の反映, 保存値で失敗時は保存値を除き反映
@@ -175,7 +176,7 @@ func (s *Instance) save(ctx context.Context, next, put map[string]string, del []
 	}
 	err = s.store.InTx(ctx, func(r port.Repositories) error {
 		if len(put) > 0 {
-			if err := r.Instance().Put(ctx, put); err != nil {
+			if err := r.Instance().Put(ctx, put, s.clock.Now()); err != nil {
 				return err
 			}
 		}

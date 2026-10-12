@@ -142,7 +142,7 @@ func open(ctx context.Context, cfg bootConfig, serving bool) (*runtime, error) {
 	a := app.New(deps, app.Options{})
 	l := &liveState{app: a, clock: clock, serving: serving}
 	defs := settingDefs()
-	a.Instance = app.NewInstance(store, defs, settingEnv(defs), l.prepare)
+	a.Instance = app.NewInstance(store, clock, defs, settingEnv(defs), l.prepare)
 	ignored, err := a.Instance.Load(ctx)
 	if err != nil {
 		store.Close()

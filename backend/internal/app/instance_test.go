@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/chan-mai/mecalo/backend/internal/app"
 	"github.com/chan-mai/mecalo/backend/internal/port"
@@ -38,8 +39,9 @@ func TestInstanceSettings(t *testing.T) {
 			}
 			return func() { applied = v }, nil
 		}
+		clock := &fixedClock{now: time.Date(2026, 10, 12, 8, 0, 0, 0, jst)}
 		env := map[string]string{"MECALO_SYNC_INTERVAL": "24h", "MECALO_TABECAL_KEY": "from-env"}
-		inst := app.NewInstance(s, instanceDefs, env, apply)
+		inst := app.NewInstance(s, clock, instanceDefs, env, apply)
 		if ignored, err := inst.Load(e.ctx); err != nil || ignored != nil {
 			t.Fatal(ignored, err)
 		}
@@ -109,7 +111,7 @@ func TestInstanceSettings(t *testing.T) {
 
 		// 保存値で反映できない場合は環境変数・既定値
 		reject = "open"
-		inst = app.NewInstance(s, instanceDefs, env, apply)
+		inst = app.NewInstance(s, clock, instanceDefs, env, apply)
 		if ignored, err := inst.Load(e.ctx); err != nil || ignored == nil || applied["MECALO_REGISTRATION"] != "closed" {
 			t.Errorf("fallback load: %v, %v, %v", ignored, err, applied)
 		}
