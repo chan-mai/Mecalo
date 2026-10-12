@@ -41,6 +41,7 @@ type Repositories interface {
 	Settings() SettingsRepository
 	Weights() WeightRepository
 	Sources() SourceRepository
+	Instance() InstanceSettingRepository
 }
 
 type Credential struct {

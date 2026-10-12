@@ -26,8 +26,8 @@ const (
 var loginNamePattern = regexp.MustCompile(`^[a-zA-Z0-9_.-]{3,32}$`)
 
 type Accounts struct {
-	d   Deps
-	opt Options
+	d    Deps
+	live *live
 }
 
 type SignUpInput struct {
@@ -49,7 +49,7 @@ func (s *Accounts) NeedsSetup(ctx context.Context) (bool, error) {
 }
 
 func (s *Accounts) RegistrationOpen() bool {
-	return s.opt.RegistrationOpen
+	return s.live.get().RegistrationOpen
 }
 
 // 利用者0件時のみ, トークン一致時に管理者を作成
@@ -76,7 +76,7 @@ func (s *Accounts) Setup(ctx context.Context, token string, in SignUpInput) (Iss
 }
 
 func (s *Accounts) SignUp(ctx context.Context, in SignUpInput) (IssuedSession, error) {
-	if !s.opt.RegistrationOpen {
+	if !s.live.get().RegistrationOpen {
 		return IssuedSession{}, ErrForbidden
 	}
 	var u user.User
@@ -193,7 +193,7 @@ func (s *Accounts) LoginExternal(ctx context.Context, id ExternalIdentity) (Issu
 		switch {
 		case n == 0:
 			role = user.RoleAdmin
-		case !s.opt.OIDCAutoProvision:
+		case !s.live.get().OIDCAutoProvision:
 			return ErrForbidden
 		}
 		u = user.User{

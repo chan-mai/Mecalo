@@ -2,17 +2,28 @@
 package system
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type Clock struct {
-	Location *time.Location
+	loc atomic.Pointer[time.Location]
 }
 
-func (c Clock) Now() time.Time {
-	return time.Now().In(c.Location)
+func NewClock(loc *time.Location) *Clock {
+	c := &Clock{}
+	c.SetLocation(loc)
+	return c
+}
+
+func (c *Clock) SetLocation(loc *time.Location) {
+	c.loc.Store(loc)
+}
+
+func (c *Clock) Now() time.Time {
+	return time.Now().In(c.loc.Load())
 }
 
 // UUIDv7

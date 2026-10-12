@@ -17,6 +17,7 @@ import (
 type Sources struct {
 	d       Deps
 	imports *Imports
+	live    *live
 	// 同期中の取得元
 	running sync.Map
 }
@@ -55,19 +56,20 @@ func (s *Sources) List(ctx context.Context) ([]SourceInfo, error) {
 	for _, st := range statuses {
 		byID[st.DatasetID] = st
 	}
+	cur := s.live.get()
 	var out []SourceInfo
 	add := func(src port.FoodSource, kind SourceKind) {
 		ds := src.Dataset()
 		_, running := s.running.Load(ds.ID)
 		out = append(out, SourceInfo{Dataset: ds, Kind: kind, Status: byID[ds.ID], Running: running})
 	}
-	if s.d.Lookup != nil {
-		add(s.d.Lookup, SourceLookup)
+	if cur.Lookup != nil {
+		add(cur.Lookup, SourceLookup)
 	}
-	for _, f := range s.d.Finders {
+	for _, f := range cur.Finders {
 		add(f, SourceFinder)
 	}
-	for _, c := range s.d.Catalogs {
+	for _, c := range cur.Catalogs {
 		add(c, SourceCatalog)
 	}
 	return out, nil
@@ -84,7 +86,7 @@ type SyncResult struct {
 }
 
 func (s *Sources) catalog(id food.DatasetID) (port.Catalog, bool) {
-	for _, c := range s.d.Catalogs {
+	for _, c := range s.live.get().Catalogs {
 		if c.Dataset().ID == id {
 			return c, true
 		}
@@ -297,7 +299,7 @@ func (k *syncSink) flush(ctx context.Context) error {
 
 // 前回同期から間隔が過ぎた取得元のみ同期, 同期の失敗は状態とOnSyncへ記録
 func (s *Sources) SyncDue(ctx context.Context, interval time.Duration) error {
-	for _, c := range s.d.Catalogs {
+	for _, c := range s.live.get().Catalogs {
 		id := c.Dataset().ID
 		st, err := s.d.Store.Sources().Status(ctx, id)
 		if err != nil && !errors.Is(err, ErrNotFound) {
@@ -332,11 +334,12 @@ func (s *Sources) Search(ctx context.Context, query string) (ExternalResult, err
 	if key == "" {
 		return ExternalResult{}, invalid(errors.New("query is required"))
 	}
-	if len(s.d.Finders) == 0 {
+	finders := s.live.get().Finders
+	if len(finders) == 0 {
 		return ExternalResult{}, ErrDisabled
 	}
 	var out ExternalResult
-	for _, f := range s.d.Finders {
+	for _, f := range finders {
 		ds := f.Dataset()
 		foods, err := s.find(ctx, f, query, key)
 		if err != nil {
@@ -397,7 +400,7 @@ func (s *Sources) find(ctx context.Context, f port.FoodFinder, query, key string
 // 外部検索で選んだ食品をシステム食品として保存
 func (s *Sources) Save(ctx context.Context, id food.DatasetID, reference string) (food.ID, error) {
 	var finder port.FoodFinder
-	for _, f := range s.d.Finders {
+	for _, f := range s.live.get().Finders {
 		if f.Dataset().ID == id {
 			finder = f
 		}

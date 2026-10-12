@@ -55,3 +55,52 @@ model CreateUserRequest {
   ...SignUpRequest;
   role: Role;
 }
+
+enum SettingKind {
+  text,
+  secret,
+  bool,
+  duration,
+  @doc("optionsから1つ")
+  choice,
+  @doc("optionsから複数, カンマ区切り")
+  choices,
+  @doc("任意の値のカンマ区切り")
+  list,
+}
+
+enum SettingOrigin {
+  default,
+  env,
+  ui,
+}
+
+@doc("WebUIで変更できる設定")
+model InstanceSetting {
+  @doc("環境変数名")
+  key: string;
+
+  group: string;
+  kind: SettingKind;
+  options: string[];
+
+  @doc("現在の値, 秘密の値は空")
+  value: string;
+
+  defaultValue: string;
+
+  @doc("環境変数の値, 秘密の値は空")
+  envValue: string;
+
+  hasEnv: boolean;
+
+  @doc("値の有無")
+  configured: boolean;
+
+  origin: SettingOrigin;
+}
+
+model InstanceSettingsUpdate {
+  @doc("変更する項目のみ, キーは環境変数名")
+  values: Record<string>;
+}

@@ -80,3 +80,24 @@ namespace AdminSourcesApi {
   @route("/{id}/sync")
   op sync(@path id: string): AcceptedResponse | CommonErrors | Conflict;
 }
+
+@route("/admin/settings")
+@tag("admin")
+namespace AdminSettingsApi {
+  @doc("設定の一覧と値の出どころ")
+  @get
+  op list(): InstanceSetting[] | CommonErrors;
+
+  @doc("設定の変更, 環境変数・既定値と同じ値はWebUIでの設定を解除")
+  @put
+  op update(@body body: InstanceSettingsUpdate): InstanceSetting[] | CommonErrors;
+
+  @doc("全項目を環境変数・既定値へ戻す")
+  @delete
+  op resetAll(): InstanceSetting[] | CommonErrors;
+
+  @doc("1項目を環境変数・既定値へ戻す")
+  @delete
+  @route("/{key}")
+  op reset(@path key: string): InstanceSetting[] | CommonErrors;
+}

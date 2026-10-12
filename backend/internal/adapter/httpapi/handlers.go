@@ -24,14 +24,15 @@ func (s *server) AuthApiConfig(ctx context.Context, _ gen.AuthApiConfigRequestOb
 	if err != nil {
 		return nil, err
 	}
+	auth := s.opt.Auth()
 	res := gen.AuthApiConfig200JSONResponse{
-		SetupRequired:    setup && s.opt.LocalAuth,
-		RegistrationOpen: s.app.Accounts.RegistrationOpen() && s.opt.LocalAuth,
-		LocalEnabled:     s.opt.LocalAuth,
-		OidcEnabled:      s.opt.OIDC != nil,
+		SetupRequired:    setup && auth.Local,
+		RegistrationOpen: s.app.Accounts.RegistrationOpen() && auth.Local,
+		LocalEnabled:     auth.Local,
+		OidcEnabled:      auth.OIDC != nil,
 	}
-	if s.opt.OIDC != nil {
-		name := s.opt.OIDC.Name()
+	if auth.OIDC != nil {
+		name := auth.OIDC.Name()
 		res.OidcName = &name
 	}
 	return res, nil
@@ -42,7 +43,7 @@ func signUpInput(b gen.SignUpRequest) app.SignUpInput {
 }
 
 func (s *server) AuthApiSetup(ctx context.Context, req gen.AuthApiSetupRequestObject) (gen.AuthApiSetupResponseObject, error) {
-	if !s.opt.LocalAuth {
+	if !s.opt.Auth().Local {
 		return nil, app.ErrDisabled
 	}
 	b := req.Body
@@ -55,7 +56,7 @@ func (s *server) AuthApiSetup(ctx context.Context, req gen.AuthApiSetupRequestOb
 }
 
 func (s *server) AuthApiSignUp(ctx context.Context, req gen.AuthApiSignUpRequestObject) (gen.AuthApiSignUpResponseObject, error) {
-	if !s.opt.LocalAuth {
+	if !s.opt.Auth().Local {
 		return nil, app.ErrDisabled
 	}
 	sess, err := s.app.Accounts.SignUp(ctx, signUpInput(*req.Body))
@@ -67,7 +68,7 @@ func (s *server) AuthApiSignUp(ctx context.Context, req gen.AuthApiSignUpRequest
 }
 
 func (s *server) AuthApiLogin(ctx context.Context, req gen.AuthApiLoginRequestObject) (gen.AuthApiLoginResponseObject, error) {
-	if !s.opt.LocalAuth {
+	if !s.opt.Auth().Local {
 		return nil, app.ErrDisabled
 	}
 	sess, err := s.app.Accounts.LoginLocal(ctx, req.Body.LoginName, req.Body.Password)
@@ -146,6 +147,73 @@ func (s *server) AdminSourcesApiSync(ctx context.Context, req gen.AdminSourcesAp
 		return nil, err
 	}
 	return gen.AdminSourcesApiSync202Response{}, nil
+}
+
+func (s *server) instance() (*app.Instance, error) {
+	if s.app.Instance == nil {
+		return nil, app.ErrDisabled
+	}
+	return s.app.Instance, nil
+}
+
+func toInstanceSettings(list []app.Setting) []gen.InstanceSetting {
+	out := make([]gen.InstanceSetting, 0, len(list))
+	for _, st := range list {
+		out = append(out, gen.InstanceSetting{
+			Key: st.Key, Group: st.Group, Kind: gen.SettingKind(st.Kind), Options: nonNil(st.Options),
+			Value: st.Value, DefaultValue: st.Default, EnvValue: st.EnvValue, HasEnv: st.HasEnv,
+			Configured: st.Configured, Origin: gen.SettingOrigin(st.Origin),
+		})
+	}
+	return out
+}
+
+func (s *server) AdminSettingsApiList(ctx context.Context, _ gen.AdminSettingsApiListRequestObject) (gen.AdminSettingsApiListResponseObject, error) {
+	inst, err := s.instance()
+	if err != nil {
+		return nil, err
+	}
+	list, err := inst.List(ctx, currentUser(ctx))
+	if err != nil {
+		return nil, err
+	}
+	return gen.AdminSettingsApiList200JSONResponse(toInstanceSettings(list)), nil
+}
+
+func (s *server) AdminSettingsApiUpdate(ctx context.Context, req gen.AdminSettingsApiUpdateRequestObject) (gen.AdminSettingsApiUpdateResponseObject, error) {
+	inst, err := s.instance()
+	if err != nil {
+		return nil, err
+	}
+	list, err := inst.Update(ctx, currentUser(ctx), req.Body.Values)
+	if err != nil {
+		return nil, err
+	}
+	return gen.AdminSettingsApiUpdate200JSONResponse(toInstanceSettings(list)), nil
+}
+
+func (s *server) AdminSettingsApiResetAll(ctx context.Context, _ gen.AdminSettingsApiResetAllRequestObject) (gen.AdminSettingsApiResetAllResponseObject, error) {
+	inst, err := s.instance()
+	if err != nil {
+		return nil, err
+	}
+	list, err := inst.Reset(ctx, currentUser(ctx), nil)
+	if err != nil {
+		return nil, err
+	}
+	return gen.AdminSettingsApiResetAll200JSONResponse(toInstanceSettings(list)), nil
+}
+
+func (s *server) AdminSettingsApiReset(ctx context.Context, req gen.AdminSettingsApiResetRequestObject) (gen.AdminSettingsApiResetResponseObject, error) {
+	inst, err := s.instance()
+	if err != nil {
+		return nil, err
+	}
+	list, err := inst.Reset(ctx, currentUser(ctx), []string{req.Key})
+	if err != nil {
+		return nil, err
+	}
+	return gen.AdminSettingsApiReset200JSONResponse(toInstanceSettings(list)), nil
 }
 
 // 食品

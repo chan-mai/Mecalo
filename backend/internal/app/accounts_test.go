@@ -16,7 +16,7 @@ func TestSetupToken(t *testing.T) {
 	eachStore(t, func(t *testing.T, s port.Store) {
 		a := app.New(app.Deps{
 			Store:      s,
-			Clock:      system.Clock{Location: time.UTC},
+			Clock:      system.NewClock(time.UTC),
 			IDs:        system.UUIDs{},
 			Hasher:     password.Fast(),
 			SetupToken: "token",

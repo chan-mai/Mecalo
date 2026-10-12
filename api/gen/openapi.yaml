@@ -17,6 +17,175 @@ tags:
   - name: data
   - name: system
 paths:
+  /admin/settings:
+    get:
+      operationId: AdminSettingsApi_list
+      description: 設定の一覧と値の出どころ
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InstanceSetting'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - admin
+    put:
+      operationId: AdminSettingsApi_update
+      description: 設定の変更, 環境変数・既定値と同じ値はWebUIでの設定を解除
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InstanceSetting'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstanceSettingsUpdate'
+    delete:
+      operationId: AdminSettingsApi_resetAll
+      description: 全項目を環境変数・既定値へ戻す
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InstanceSetting'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - admin
+  /admin/settings/{key}:
+    delete:
+      operationId: AdminSettingsApi_reset
+      description: 1項目を環境変数・既定値へ戻す
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InstanceSetting'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - admin
   /admin/sources:
     get:
       operationId: AdminSourcesApi_list
@@ -2917,6 +3086,57 @@ components:
           type: string
         quantity:
           $ref: '#/components/schemas/Quantity'
+    InstanceSetting:
+      type: object
+      required:
+        - key
+        - group
+        - kind
+        - options
+        - value
+        - defaultValue
+        - envValue
+        - hasEnv
+        - configured
+        - origin
+      properties:
+        key:
+          type: string
+          description: 環境変数名
+        group:
+          type: string
+        kind:
+          $ref: '#/components/schemas/SettingKind'
+        options:
+          type: array
+          items:
+            type: string
+        value:
+          type: string
+          description: 現在の値, 秘密の値は空
+        defaultValue:
+          type: string
+        envValue:
+          type: string
+          description: 環境変数の値, 秘密の値は空
+        hasEnv:
+          type: boolean
+        configured:
+          type: boolean
+          description: 値の有無
+        origin:
+          $ref: '#/components/schemas/SettingOrigin'
+      description: WebUIで変更できる設定
+    InstanceSettingsUpdate:
+      type: object
+      required:
+        - values
+      properties:
+        values:
+          type: object
+          additionalProperties:
+            type: string
+          description: 変更する項目のみ, キーは環境変数名
     Level:
       type: string
       enum:
@@ -3349,6 +3569,22 @@ components:
       enum:
         - admin
         - member
+    SettingKind:
+      type: string
+      enum:
+        - text
+        - secret
+        - bool
+        - duration
+        - choice
+        - choices
+        - list
+    SettingOrigin:
+      type: string
+      enum:
+        - default
+        - env
+        - ui
     Settings:
       type: object
       required:

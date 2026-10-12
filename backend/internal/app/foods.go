@@ -25,6 +25,7 @@ var UserDataset = food.Dataset{
 type Foods struct {
 	d       Deps
 	imports *Imports
+	live    *live
 }
 
 type FoodView struct {
@@ -468,16 +469,17 @@ func (s *Foods) ByBarcode(ctx context.Context, uid user.ID, code string) (FoodVi
 	if !errors.Is(err, ErrNotFound) {
 		return FoodView{}, err
 	}
-	if s.d.Lookup == nil {
+	lookup := s.live.get().Lookup
+	if lookup == nil {
 		return FoodView{}, ErrNotFound
 	}
 
-	sf, err := s.d.Lookup.Lookup(ctx, code)
+	sf, err := lookup.Lookup(ctx, code)
 	if err != nil {
 		return FoodView{}, err
 	}
 	var id food.ID
-	if _, err := s.imports.upsert(ctx, s.d.Lookup.Dataset(), []SystemFood{sf}, func(fid food.ID) { id = fid }); err != nil {
+	if _, err := s.imports.upsert(ctx, lookup.Dataset(), []SystemFood{sf}, func(fid food.ID) { id = fid }); err != nil {
 		return FoodView{}, err
 	}
 	return s.Get(ctx, uid, id)

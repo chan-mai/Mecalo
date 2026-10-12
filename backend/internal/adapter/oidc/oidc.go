@@ -7,6 +7,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
+	"time"
 
 	gooidc "github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
@@ -35,6 +37,7 @@ type Provider struct {
 var _ httpapi.OIDCProvider = (*Provider)(nil)
 
 func New(ctx context.Context, cfg Config) (*Provider, error) {
+	ctx = gooidc.ClientContext(context.WithoutCancel(ctx), &http.Client{Timeout: 15 * time.Second})
 	p, err := gooidc.NewProvider(ctx, cfg.Issuer)
 	if err != nil {
 		return nil, fmt.Errorf("oidc discovery: %w", err)
