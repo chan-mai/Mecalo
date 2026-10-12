@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/chan-mai/mecalo/backend/internal/adapter/openfoodfacts"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/tabecal"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/webfetch"
 	"github.com/chan-mai/mecalo/backend/internal/app"
 )
@@ -14,7 +15,7 @@ import (
 var version = "0.1.0"
 
 // MECALO_SOURCESに指定できる取得元
-var sourceNames = []string{"openfoodfacts", "openfoodfacts-delta"}
+var sourceNames = []string{"openfoodfacts", "openfoodfacts-delta", "tabecal"}
 
 func configureSources(cfg config, deps *app.Deps) error {
 	names := slices.Clone(cfg.Sources)
@@ -41,6 +42,8 @@ func configureSources(cfg config, deps *app.Deps) error {
 			deps.Lookup = openfoodfacts.NewClient(cfg.OFFBaseURL, ua)
 		case "openfoodfacts-delta":
 			deps.Catalogs = append(deps.Catalogs, &openfoodfacts.Delta{Fetch: fetch})
+		case "tabecal":
+			deps.Finders = append(deps.Finders, tabecal.New("", cfg.TabecalKey, fetch.UserAgent))
 		default:
 			return fmt.Errorf("unknown source %q in MECALO_SOURCES (available: all, %s)", raw, strings.Join(sourceNames, ", "))
 		}
