@@ -1,8 +1,6 @@
 <script setup lang="ts">
 definePageMeta({ layout: false });
 
-const { me } = useAuth();
-const { complete } = useOnboarding();
 const curtain = useEntryCurtain();
 const phase = ref<'story' | 'setup'>('story');
 
@@ -14,7 +12,6 @@ function toSetup(from: Element) {
 }
 
 async function finish(from?: Element) {
-	if (me.value) complete(me.value.id);
 	await curtain.play('onboarded', () => navigateTo('/'), from);
 }
 </script>

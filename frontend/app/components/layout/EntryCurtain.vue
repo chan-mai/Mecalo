@@ -115,7 +115,7 @@ onMounted(async () => {
 		return;
 	}
 	place('.curtain-sheet', center(), 1);
-	kind.value = await loginKind();
+	kind.value = loginKind();
 	await nextTick();
 	const tl = gsap.timeline();
 	markIn(tl, 0);

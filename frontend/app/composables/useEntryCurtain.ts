@@ -21,7 +21,6 @@ function centerOf(el: Element | null | undefined) {
 
 export function useEntryCurtain() {
 	const { me } = useAuth();
-	const { needed } = useOnboarding();
 
 	async function play(kind: CurtainKind, go: () => unknown, from?: Element | null) {
 		const p = player;
@@ -40,13 +39,13 @@ export function useEntryCurtain() {
 		}
 	}
 
-	async function loginKind(): Promise<CurtainKind> {
-		return me.value && await needed(me.value.id) ? 'first' : 'return';
+	function loginKind(): CurtainKind {
+		return me.value?.onboarded === false ? 'first' : 'return';
 	}
 
 	// ログイン完了後遷移
 	async function enter(go: () => unknown, from?: Element | null) {
-		await play(await loginKind(), go, from);
+		await play(loginKind(), go, from);
 	}
 
 	function markPending() {

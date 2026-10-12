@@ -10,11 +10,11 @@ import (
 
 type users repos
 
-const userColumns = "u.id, u.display_name, u.role, u.created_at"
+const userColumns = "u.id, u.display_name, u.role, u.created_at, u.onboarded"
 
 func scanUser(row interface{ Scan(...any) error }, extra ...any) (user.User, error) {
 	var u user.User
-	dest := append([]any{&u.ID, &u.DisplayName, &u.Role, timeCol{&u.CreatedAt}}, extra...)
+	dest := append([]any{&u.ID, &u.DisplayName, &u.Role, timeCol{&u.CreatedAt}, &u.Onboarded}, extra...)
 	err := row.Scan(dest...)
 	return u, notFound(err)
 }
@@ -83,6 +83,10 @@ func (r users) UpdatePassword(ctx context.Context, id user.ID, hash string) erro
 
 func (r users) Update(ctx context.Context, u user.User) error {
 	return affectedOne(r.q.exec(ctx, "UPDATE users SET display_name = ?, role = ? WHERE id = ?", u.DisplayName, u.Role, u.ID))
+}
+
+func (r users) MarkOnboarded(ctx context.Context, id user.ID) error {
+	return affectedOne(r.q.exec(ctx, "UPDATE users SET onboarded = ? WHERE id = ?", true, id))
 }
 
 func (r users) UpdateLoginName(ctx context.Context, id user.ID, login string) error {

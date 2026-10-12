@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { toast } from 'vue-sonner';
 import { unwrap, useApi } from '~/composables/api/client';
-import { weightSchema } from '~/schemas/settings';
+import { weightEntrySchema } from '~/schemas/settings';
 import { addDays, formatDate, startOfWeek, todayIso } from '~/utils/date';
 
 const { t, locale } = useI18n();
 const confirmDelete = useConfirmDelete();
 const onError = useErrorHandler();
 const api = useApi();
-const { errors, validate } = useValidation(weightSchema);
+const { errors, validate } = useValidation(weightEntrySchema);
 const outbox = useOutbox();
 
 const modes = ['week', 'month'] as const;
@@ -50,10 +50,11 @@ const energyTarget = computed(() => report.value?.days.at(-1)?.targets?.energyKc
 const weightForm = reactive<{ date: string; kg?: number }>({ date: today });
 
 async function saveWeight() {
-	const body = validate({ kg: weightForm.kg });
-	if (!body) return;
+	const entry = validate({ date: weightForm.date, kg: weightForm.kg });
+	if (!entry) return;
+	const { date, ...body } = entry;
 	try {
-		const res = await outbox.run({ kind: 'saveWeight', date: weightForm.date, body });
+		const res = await outbox.run({ kind: 'saveWeight', date, body });
 		toast(res.queued ? t('common.messages.savedOffline') : t('common.messages.weightSaved'));
 		await refreshWeights();
 	} catch (err) {
@@ -111,7 +112,7 @@ async function deleteWeight(date: string) {
 		<p v-else class="text-sm text-muted">{{ t('pages.history.noWeights') }}</p>
 
 		<form class="mt-3 grid grid-cols-[1fr_1fr_auto] items-end gap-2" novalidate @submit.prevent="saveWeight">
-			<FormField v-slot="{ field }" :label="t('terms.date')"><DateField v-bind="field" v-model="weightForm.date" :max="today"/></FormField>
+			<FormField v-slot="{ field }" :label="t('terms.date')" :error="errors.date"><DateField v-bind="field" v-model="weightForm.date" :max="today"/></FormField>
 			<FormField v-slot="{ field }" :label="t('terms.weightKg')" :error="errors.kg"><input v-bind="field" v-model.number="weightForm.kg" type="number" inputmode="decimal" step="0.1" class="input"></FormField>
 			<button class="btn btn-primary">{{ t('common.save') }}</button>
 		</form>

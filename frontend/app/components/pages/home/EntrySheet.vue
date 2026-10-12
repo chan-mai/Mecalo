@@ -2,6 +2,7 @@
 import { toast } from 'vue-sonner';
 import type { Schemas } from '~/composables/api/client';
 import { unwrap, useApi } from '~/composables/api/client';
+import { mealPlacementSchema } from '~/schemas/food';
 import { pendingPrefix, slots } from '~/utils/meals';
 
 const props = defineProps<{ entry?: Schemas['MealEntry'] }>();
@@ -12,6 +13,7 @@ const uid = useId();
 const onError = useErrorHandler();
 const api = useApi();
 const outbox = useOutbox();
+const { errors, validate } = useValidation(mealPlacementSchema);
 
 const food = ref<Schemas['Food']>();
 const busy = ref(false);
@@ -57,7 +59,9 @@ watch(() => props.entry, async (entry) => {
 });
 
 async function save(quantity: Schemas['Quantity']) {
-	const body = { quantity, date: date.value, slot: slot.value };
+	const placement = validate({ date: date.value, slot: slot.value });
+	if (!placement) return;
+	const body = { quantity, ...placement };
 	await run(async (id) => {
 		if (id.startsWith(pendingPrefix)) {
 			const before = props.entry?.quantity;
@@ -124,10 +128,9 @@ async function run(fn: (id: string) => Promise<boolean>, message: string) {
 		<QuantityForm :key="entry.id" :food="snapshotFood" :initial="entry.quantity" :busy="busy" :submitLabel="t('common.save')" @submit="save">
 			<template #extra>
 				<div class="grid grid-cols-2 gap-2">
-					<div>
-						<span :id="`${uid}-date`" class="mb-1 block text-sm text-muted">{{ t('terms.date') }}</span>
-						<DateField v-model="date" :aria-labelledby="`${uid}-date`"/>
-					</div>
+					<FormField v-slot="{ field, labelId }" :label="t('terms.date')" :error="errors.date">
+						<DateField v-bind="field" v-model="date" :aria-labelledby="labelId"/>
+					</FormField>
 					<div>
 						<span :id="`${uid}-slot`" class="mb-1 block text-sm text-muted">{{ t('terms.mealSlot') }}</span>
 						<SelectField v-model="slot" :labelledby="`${uid}-slot`" :options="slots.map((s) => ({ value: s, label: t(`terms.slot.${s}`) }))"/>

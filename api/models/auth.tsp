@@ -14,6 +14,9 @@ model User {
 
   role: Role;
   createdAt: utcDateTime;
+
+  @doc("初回セットアップ完了済み")
+  onboarded: boolean;
 }
 
 model AuthConfig {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const { t } = useI18n();
-const { online, pending, failed, remove, retryFailed } = useOutbox();
+const { pending, failed, remove, retryFailed } = useOutbox();
+const { online, connected } = useConnectivity();
 const showFailed = ref(false);
 
 async function retry() {
@@ -11,12 +12,12 @@ async function retry() {
 </script>
 
 <template>
-<div v-if="!online || pending.length || failed.length" class="sticky top-0 z-30 -mx-4 mb-2 px-4 pt-[env(safe-area-inset-top)]">
-	<div class="flex items-center gap-2 rounded-xl px-3 py-2 text-xs" :class="!online ? 'bg-tertiary text-tertiary-ink' : 'bg-warning-soft text-warning'" role="status">
+<div v-if="!connected || pending.length || failed.length" class="sticky top-0 z-30 -mx-4 mb-2 px-4 pt-[env(safe-area-inset-top)]">
+	<div class="flex items-center gap-2 rounded-xl px-3 py-2 text-xs" :class="!connected ? 'bg-tertiary text-tertiary-ink' : 'bg-warning-soft text-warning'" role="status">
 		<span class="flex-1">
-			<template v-if="!online">{{ t('layout.syncStatus.offline') }}<template v-if="pending.length"> ({{ t('layout.syncStatus.pending', { count: pending.length }) }})</template></template>
+			<template v-if="!connected">{{ t('layout.syncStatus.offline') }}<template v-if="pending.length"> ({{ t('layout.syncStatus.pending', { count: pending.length }) }})</template></template>
 			<template v-else-if="pending.length">{{ t('layout.syncStatus.syncing', { count: pending.length }) }}</template>
-			<template v-if="failed.length"><span v-if="!online || pending.length"> / </span>{{ t('layout.syncStatus.failed', { count: failed.length }) }}</template>
+			<template v-if="failed.length"><span v-if="!connected || pending.length"> / </span>{{ t('layout.syncStatus.failed', { count: failed.length }) }}</template>
 		</span>
 		<button v-if="failed.length" type="button" class="font-semibold underline" @click="showFailed = true">{{ t('common.edit') }}</button>
 	</div>

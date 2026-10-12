@@ -1,8 +1,8 @@
 import * as v from 'valibot';
+import { isoDate } from './common';
 import type { Schemas } from '~/composables/api/client';
 import { latestBirthDate } from '~/utils/date';
 
-const isoDate = v.pipe(v.string(), v.isoDate('errors.validation.date'));
 const optionalNumber = v.optional(v.pipe(v.number('errors.validation.number'), v.minValue(0, 'errors.validation.positive')));
 
 export const profileSchema = v.object({
@@ -30,3 +30,6 @@ export const weightSchema = v.object({
 	kg: v.pipe(v.number('errors.validation.number'), v.gtValue(0, 'errors.validation.positive')),
 	bodyFatPct: v.optional(v.pipe(v.number('errors.validation.number'), v.minValue(0), v.maxValue(100))),
 }) satisfies v.GenericSchema<unknown, Schemas['WeightInput']>;
+
+// 記録日と体重
+export const weightEntrySchema = v.object({ date: isoDate, ...weightSchema.entries });

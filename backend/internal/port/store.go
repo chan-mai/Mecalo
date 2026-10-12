@@ -64,6 +64,7 @@ type UserRepository interface {
 	// 表示名と権限
 	Update(ctx context.Context, u user.User) error
 	UpdateLoginName(ctx context.Context, id user.ID, login string) error
+	MarkOnboarded(ctx context.Context, id user.ID) error
 	// ローカルのログイン名, OIDCのみの利用者は含まない
 	LoginNames(ctx context.Context) (map[user.ID]string, error)
 	Delete(ctx context.Context, id user.ID) error

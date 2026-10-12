@@ -6,7 +6,7 @@ import { formatInt } from '~/utils/nutrients';
 
 const emit = defineEmits<{ finished: [from: Element] }>();
 const { t, locale } = useI18n();
-const { me } = useAuth();
+const { me, refresh } = useAuth();
 const onError = useErrorHandler();
 const api = useApi();
 const motion = usePreferredReducedMotion();
@@ -209,6 +209,8 @@ async function finish() {
 		if (answers.weight) {
 			await unwrap(api.PUT('/weights/{date}', { params: { path: { date: todayIso() } }, body: answers.weight }));
 		}
+		await unwrap(api.POST('/me/onboarding'));
+		await refresh();
 		try {
 			targets.value = await unwrap(api.GET('/targets/{date}', { params: { path: { date: todayIso() } } }));
 		} catch (err) {

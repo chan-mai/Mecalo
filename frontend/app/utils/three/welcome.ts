@@ -32,6 +32,7 @@ export interface WelcomeScene {
 interface Options {
 	animate: boolean;
 	onFrame?: (frame: WelcomeFrame) => void;
+	signal?: AbortSignal;
 }
 
 // 塗りと輪郭線, palette.cssのブランド色と各色の濃色
@@ -116,6 +117,10 @@ const shots = [
 ];
 
 export async function mountWelcome(el: HTMLElement, opts: Options): Promise<WelcomeScene> {
+	opts.signal?.throwIfAborted();
+	const parts = await loadParts();
+	opts.signal?.throwIfAborted();
+
 	const renderer = new THREE.WebGLRenderer({ antialias: true });
 	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 	el.appendChild(renderer.domElement);
@@ -134,7 +139,6 @@ export async function mountWelcome(el: HTMLElement, opts: Options): Promise<Welc
 	sun.position.set(4, 6, 5);
 	scene.add(sun);
 
-	const parts = await loadParts();
 	const gradientMap = toonGradient();
 	const part = (name: string) => parts.get(name) ?? new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16));
 
@@ -346,7 +350,7 @@ export async function mountWelcome(el: HTMLElement, opts: Options): Promise<Welc
 	resize();
 	if (opts.animate) renderer.setAnimationLoop(render);
 
-	return {
+	const mounted: WelcomeScene = {
 		setProgress(p: number) {
 			progress = Math.min(Math.max(p, 0), 4);
 			if (!opts.animate) render();
@@ -365,6 +369,8 @@ export async function mountWelcome(el: HTMLElement, opts: Options): Promise<Welc
 			renderer.domElement.remove();
 		},
 	};
+	opts.signal?.addEventListener('abort', () => mounted.dispose(), { once: true });
+	return mounted;
 }
 
 // 名前ごとの部品, 読み込めない場合は空

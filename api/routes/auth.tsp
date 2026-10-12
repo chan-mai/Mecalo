@@ -62,6 +62,11 @@ namespace MeApi {
   @put
   @route("/password")
   op changePassword(@body body: PasswordChange): NoContentResponse | CommonErrors;
+
+  @doc("初回セットアップの完了")
+  @post
+  @route("/onboarding")
+  op completeOnboarding(): NoContentResponse | CommonErrors;
 }
 
 @route("/admin/users")

@@ -81,11 +81,10 @@ function monthName(m: number): string {
 	return new Date(2000, m - 1, 1).toLocaleString(locale.value, { month: 'short' });
 }
 
-// 入力欄でのEnterは囲むフォームの送信
+// 年月日の欄でのEnterは囲むフォームの送信
 function submitForm(event: KeyboardEvent) {
 	const form = (event.currentTarget as HTMLElement).closest('form');
-	// カレンダーボタン上は開閉を優先
-	if (!form || isOpen.value || (event.target as HTMLElement).closest('button')) return;
+	if (!form || isOpen.value) return;
 	event.preventDefault();
 	event.stopPropagation();
 	form.requestSubmit();
@@ -103,16 +102,18 @@ function pickMonth(m: number) {
 </script>
 
 <template>
-<DatePickerRoot v-model="value" v-model:placeholder="placeholder" v-model:open="isOpen" :locale="locale" :weekStartsOn="1" :maxValue="maxValue" :minValue="minValue" fixedWeeks weekdayFormat="short">
-	<DatePickerField v-slot="{ segments }" v-bind="attrs" class="date-field input flex items-center gap-0.5 tabular-nums" @keydown.enter.capture="submitForm">
-		<template v-for="item in segments" :key="item.part">
-			<DatePickerInput v-if="item.part === 'literal'" :part="item.part" class="text-muted">{{ item.value }}</DatePickerInput>
-			<DatePickerInput v-else :part="item.part" class="segment rounded-md px-0.5">{{ item.value }}</DatePickerInput>
-		</template>
-		<DatePickerTrigger class="press ml-auto grid size-8 place-items-center rounded-full text-muted" :aria-label="t('common.calendar.open')">
+<DatePickerRoot v-model="value" v-model:placeholder="placeholder" v-model:open="isOpen" :locale="locale" :weekStartsOn="1" :maxValue="maxValue" :minValue="minValue" fixedWeeks preventDeselect weekdayFormat="short">
+	<div class="date-field input flex items-center">
+		<DatePickerField v-slot="{ segments }" v-bind="attrs" class="flex flex-1 items-center gap-0.5 tabular-nums" @keydown.enter.capture="submitForm">
+			<template v-for="item in segments" :key="item.part">
+				<DatePickerInput v-if="item.part === 'literal'" :part="item.part" class="text-muted">{{ item.value }}</DatePickerInput>
+				<DatePickerInput v-else :part="item.part" class="segment rounded-md px-0.5">{{ item.value }}</DatePickerInput>
+			</template>
+		</DatePickerField>
+		<DatePickerTrigger class="press grid size-8 place-items-center rounded-full text-muted" :aria-label="t('common.calendar.open')">
 			<Icon name="lucide:calendar" size="18" aria-hidden="true"/>
 		</DatePickerTrigger>
-	</DatePickerField>
+	</div>
 	<Teleport to="body">
 		<DatePickerContent :sideOffset="8" align="end" class="panel z-50 w-[20.5rem] max-w-[calc(100vw-2rem)] !rounded-3xl !bg-[var(--glass-strong)] p-4">
 			<!-- 年 -->

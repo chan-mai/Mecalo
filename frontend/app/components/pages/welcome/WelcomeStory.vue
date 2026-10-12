@@ -93,12 +93,19 @@ const scanY = computed(() => {
 	return top - 40 + (f?.scan ?? 0) * (bottom - top + 80);
 });
 
+const lifetime = new AbortController();
+
 onMounted(async () => {
 	gsap.registerPlugin(ScrollTrigger);
 	window.scrollTo(0, 0);
 	if (canUseWebGL() && stage.value) {
 		const { mountWelcome } = await import('~/utils/three/welcome');
-		scene = await mountWelcome(stage.value, { animate: !reduced.value, onFrame: (f) => (frame.value = f) });
+		try {
+			scene = await mountWelcome(stage.value, { animate: !reduced.value, onFrame: (f) => (frame.value = f), signal: lifetime.signal });
+		} catch (err) {
+			if (lifetime.signal.aborted) return;
+			throw err;
+		}
 	}
 	if (reduced.value) {
 		ctx = gsap.context(() => {
@@ -160,8 +167,8 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+	lifetime.abort();
 	ctx?.revert();
-	scene?.dispose();
 });
 </script>
 

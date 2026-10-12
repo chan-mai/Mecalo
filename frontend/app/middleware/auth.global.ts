@@ -9,7 +9,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 	if (me && publicPages.includes(to.path)) {
 		return navigateTo('/');
 	}
-	if (me && to.path !== '/welcome' && await useOnboarding().needed(me.id)) {
+	if (me && !me.onboarded && to.path !== '/welcome') {
 		return navigateTo('/welcome');
 	}
 });

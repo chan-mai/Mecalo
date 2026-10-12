@@ -116,6 +116,13 @@ func (s *server) MeApiChangePassword(ctx context.Context, req gen.MeApiChangePas
 	return gen.MeApiChangePassword204Response{}, nil
 }
 
+func (s *server) MeApiCompleteOnboarding(ctx context.Context, _ gen.MeApiCompleteOnboardingRequestObject) (gen.MeApiCompleteOnboardingResponseObject, error) {
+	if err := s.app.Accounts.CompleteOnboarding(ctx, currentUser(ctx)); err != nil {
+		return nil, err
+	}
+	return gen.MeApiCompleteOnboarding204Response{}, nil
+}
+
 func (s *server) AdminApiList(ctx context.Context, _ gen.AdminApiListRequestObject) (gen.AdminApiListResponseObject, error) {
 	users, err := s.app.Accounts.ListUsers(ctx, currentUser(ctx))
 	if err != nil {

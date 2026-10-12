@@ -1692,6 +1692,40 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ProfileUpdate'
+  /me/onboarding:
+    post:
+      operationId: MeApi_completeOnboarding
+      description: 初回セットアップの完了
+      parameters: []
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
   /me/password:
     put:
       operationId: MeApi_changePassword
@@ -3936,6 +3970,7 @@ components:
         - displayName
         - role
         - createdAt
+        - onboarded
       properties:
         id:
           type: string
@@ -3949,6 +3984,9 @@ components:
         createdAt:
           type: string
           format: date-time
+        onboarded:
+          type: boolean
+          description: 初回セットアップ完了済み
     UserUpdate:
       type: object
       properties:
