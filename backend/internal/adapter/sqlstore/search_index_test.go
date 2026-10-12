@@ -57,3 +57,47 @@ func TestReindexOnReaderChange(t *testing.T) {
 		t.Errorf("reading_key = %q", reading)
 	}
 }
+
+func TestCompactKeys(t *testing.T) {
+	k := indexer{reader: fakeReader{}}.keys("バニラ クリーム フラペチーノ Tall", "スターバックス", []string{"バニラ フラペ"})
+	if k.compact != "ばにらくりーむふらぺちーのtall すたーばっくす ばにらふらぺ" {
+		t.Errorf("compact = %q", k.compact)
+	}
+	if k.compactReading != "ばにらくりーむふらぺちーのtall ばにらふらぺ" {
+		t.Errorf("compact reading = %q", k.compactReading)
+	}
+}
+
+func TestSearchAcrossWordBoundary(t *testing.T) {
+	ctx := context.Background()
+	s, err := OpenSQLite(ctx, filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	ds := food.Dataset{ID: "d", Kind: food.DatasetOfficial, Name: "d", ImportedAt: time.Now()}
+	rev := food.Revision{ID: "r", FoodID: "f", Number: 1, Name: "バニラ クリーム フラペチーノ Tall", Brand: "スターバックス", Source: food.Source{DatasetID: "d"}, CreatedAt: time.Now()}
+	if err := s.Datasets().Upsert(ctx, ds); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Foods().Create(ctx, food.Food{ID: "f", Kind: food.KindProduct, CreatedAt: time.Now()}, rev); err != nil {
+		t.Fatal(err)
+	}
+	for _, q := range []string{"ばにらくりーむふらぺちーの", "くりーむふらぺ"} {
+		hits, err := s.Foods().Search(ctx, port.FoodSearchQuery{Terms: [][]string{{q}}, Limit: 10})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(hits) != 1 {
+			t.Errorf("%s: hits = %d", q, len(hits))
+		}
+	}
+	// 名前とブランドをまたぐ一致は対象外
+	hits, err := s.Foods().Search(ctx, port.FoodSearchQuery{Terms: [][]string{{"tallすたー"}}, Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) != 0 {
+		t.Errorf("cross-field hits = %d", len(hits))
+	}
+}

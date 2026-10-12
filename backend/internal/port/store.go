@@ -99,6 +99,24 @@ type FoodHit struct {
 	Revision food.Revision
 }
 
+// 2文字の組の重なりでの検索
+type SimilarQuery struct {
+	UserID user.ID
+	Grams  []string
+	// 共有する組の最小数
+	MinShared int
+	Kinds     []food.Kind
+	Limit     int
+}
+
+type SimilarHit struct {
+	FoodHit
+	// 検索語と共有する組の数
+	Shared int
+	// 候補の組の総数
+	Grams int
+}
+
 type FoodRepository interface {
 	// foodと最初のリビジョンを作成
 	Create(ctx context.Context, f food.Food, rev food.Revision) error
@@ -111,6 +129,7 @@ type FoodRepository interface {
 	FindByBarcode(ctx context.Context, viewer user.ID, barcode string) (food.Food, food.Revision, error)
 	FindBySource(ctx context.Context, dataset food.DatasetID, reference string) (food.Food, food.Revision, error)
 	Search(ctx context.Context, q FoodSearchQuery) ([]FoodHit, error)
+	SearchSimilar(ctx context.Context, q SimilarQuery) ([]SimilarHit, error)
 	ListOwned(ctx context.Context, owner user.ID) ([]FoodHit, error)
 	SoftDelete(ctx context.Context, id food.ID, at time.Time) error
 	// nilで販売終了を解除

@@ -3,6 +3,7 @@ package app_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/chan-mai/mecalo/backend/internal/app"
@@ -265,6 +266,51 @@ func TestSearchDedupe(t *testing.T) {
 				ids = append(ids, h.Food.ID)
 			}
 			t.Errorf("hits = %v", ids)
+		}
+	})
+}
+
+func TestSimilarSearch(t *testing.T) {
+	eachStore(t, func(t *testing.T, s port.Store) {
+		e := newEnv(t, s)
+		ds := food.Dataset{ID: "chains", Kind: food.DatasetOfficial, Name: "chains"}
+		energy := nutrient.Profile{nutrient.Energy: nutrient.Measured(d("100"))}
+		var foods []app.SystemFood
+		for i, name := range []string{"いきなり！ステーキ ワイルドステーキ", "ステーキ丼", "ファミマ・ザ・海苔弁当", "ハンバーガー", "きつねうどん"} {
+			ref := fmt.Sprintf("%d", i)
+			foods = append(foods, app.SystemFood{ID: food.SystemID("chains", ref), Kind: food.KindProduct, Name: name, Reference: ref, Nutrients: energy})
+		}
+		if _, err := e.app.Imports.Upsert(e.ctx, ds, foods); err != nil {
+			t.Fatal(err)
+		}
+		search := func(q string) []string {
+			t.Helper()
+			hits, err := e.app.Foods.Search(e.ctx, e.alice.ID, q, nil, 10, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			names := make([]string, 0, len(hits))
+			for _, h := range hits {
+				names = append(names, h.Revision.Name)
+			}
+			return names
+		}
+		for q, want := range map[string]string{
+			"いきなりステーキ":     "いきなり！ステーキ ワイルドステーキ",
+			"ステーキ いきなり":    "いきなり！ステーキ ワイルドステーキ",
+			"ファミマザ海苔弁当":    "ファミマ・ザ・海苔弁当",
+			"ハンバーガ":        "ハンバーガー",
+			"いきなりすてーきわいるど": "いきなり！ステーキ ワイルドステーキ",
+		} {
+			if got := search(q); len(got) == 0 || got[0] != want {
+				t.Errorf("search %q = %v, want first %q", q, got, want)
+			}
+		}
+		if got := search("いきなりステーキ"); len(got) != 1 {
+			t.Errorf("unrelated foods matched: %v", got)
+		}
+		if q := "カレーライス"; len(search(q)) != 0 {
+			t.Errorf("search %q = %v", q, search(q))
 		}
 	})
 }

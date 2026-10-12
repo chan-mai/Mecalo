@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"math"
 	"slices"
 	"sort"
 	"strings"
@@ -77,6 +78,24 @@ func (s *Foods) Search(ctx context.Context, uid user.ID, query string, kinds []f
 			}
 		}
 	}
+	// 記号・空白・語順・数文字の違いは2文字の組の重なりで補う
+	similar := map[food.ID]float64{}
+	if offset == 0 {
+		extra, err := s.similar(ctx, uid, words, kinds, limit*searchCandidates, similar)
+		if err != nil {
+			return nil, err
+		}
+		found := map[food.ID]bool{}
+		for _, h := range hits {
+			found[h.Food.ID] = true
+		}
+		for _, h := range extra {
+			if !found[h.Food.ID] {
+				found[h.Food.ID] = true
+				hits = append(hits, h)
+			}
+		}
+	}
 	favs, err := s.favoriteSet(ctx, uid)
 	if err != nil {
 		return nil, err
@@ -131,7 +150,7 @@ func (s *Foods) Search(ctx context.Context, uid user.ID, query string, kinds []f
 	views = dedupe(views, priority)
 
 	score := func(v FoodView) int {
-		sc := counts[v.Food.ID]*10 + linked[v.Food.ID]*200 + (len(sourceOrder)-priority(v))*5
+		sc := counts[v.Food.ID]*10 + linked[v.Food.ID]*200 + (len(sourceOrder)-priority(v))*5 + int(similar[v.Food.ID]*similarWeight)
 		if v.Favorite {
 			sc += 50
 		}
@@ -168,6 +187,49 @@ func (s *Foods) Search(ctx context.Context, uid user.ID, query string, kinds []f
 		}
 	}
 	return views, nil
+}
+
+const (
+	// 検索語の組のうち候補が含むべき割合
+	similarMinContainment = 0.6
+	// 類似度(0〜1)の順位への重み
+	similarWeight = 60
+)
+
+// 表記と読みそれぞれの組で検索, 食品ごとの類似度をscoresへ記録
+func (s *Foods) similar(ctx context.Context, uid user.ID, words []string, kinds []food.Kind, limit int, scores map[food.ID]float64) ([]port.FoodHit, error) {
+	sets := [][]string{food.Bigrams(strings.Join(words, ""))}
+	if s.d.Reader != nil {
+		readings := make([]string, 0, len(words))
+		for _, w := range words {
+			readings = append(readings, food.SearchKey(s.d.Reader.Reading(w)))
+		}
+		if r := food.Bigrams(strings.Join(readings, "")); !slices.Equal(r, sets[0]) {
+			sets = append(sets, r)
+		}
+	}
+	var out []port.FoodHit
+	for _, grams := range sets {
+		// 1組だけの短い検索語は部分一致のみ
+		if len(grams) < 2 {
+			continue
+		}
+		hits, err := s.d.Store.Foods().SearchSimilar(ctx, port.SimilarQuery{
+			UserID: uid, Grams: grams, Kinds: kinds, Limit: limit,
+			MinShared: int(math.Ceil(similarMinContainment * float64(len(grams)))),
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, h := range hits {
+			_, dice := food.Similarity(h.Shared, len(grams), h.Grams)
+			if _, seen := scores[h.Food.ID]; !seen {
+				out = append(out, h.FoodHit)
+			}
+			scores[h.Food.ID] = max(scores[h.Food.ID], dice)
+		}
+	}
+	return out, nil
 }
 
 // 語ごとの表記と読みの検索キー
