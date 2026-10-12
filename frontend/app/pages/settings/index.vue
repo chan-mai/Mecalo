@@ -9,6 +9,12 @@ import { formatInt, unitLabel } from '~/utils/nutrients';
 const { t, locale, locales, setLocale } = useI18n();
 const uid = useId();
 const { me, logout } = useAuth();
+const confirm = useConfirm();
+
+async function confirmLogout() {
+	if (await confirm({ title: t('pages.settings.logoutConfirm'), confirmLabel: t('pages.settings.logout'), danger: true })) await logout();
+}
+
 const { catalog } = useNutrientCatalog();
 const onError = useErrorHandler();
 const api = useApi();
@@ -192,7 +198,7 @@ async function save() {
 				@update:modelValue="(v) => setLocale(v as 'ja' | 'en')"
 			/>
 		</div>
-		<button type="button" class="w-full px-4 py-3 text-left text-danger" @click="logout">{{ t('pages.settings.logout') }}</button>
+		<button type="button" class="w-full px-4 py-3 text-left text-danger" @click="confirmLogout">{{ t('pages.settings.logout') }}</button>
 	</section>
 </div>
 </template>

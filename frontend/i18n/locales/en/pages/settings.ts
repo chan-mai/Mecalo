@@ -25,6 +25,7 @@ export default {
 		account: 'Account',
 		language: 'Language',
 		logout: 'Log out',
+		logoutConfirm: 'Log out?',
 		links: {
 			about: 'Data sources and licenses',
 			users: 'Manage users',

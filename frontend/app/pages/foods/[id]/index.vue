@@ -4,6 +4,7 @@ import { unwrap, useApi } from '~/composables/api/client';
 import { formatDate } from '~/utils/date';
 
 const { t, locale } = useI18n();
+const confirmDelete = useConfirmDelete();
 const route = useRoute();
 const onError = useErrorHandler();
 const api = useApi();
@@ -32,7 +33,7 @@ async function toggleFavorite() {
 }
 
 async function remove() {
-	if (!window.confirm(t('common.confirmDelete'))) return;
+	if (!await confirmDelete()) return;
 	try {
 		await unwrap(api.DELETE('/foods/{id}', { params: { path: { id: id.value } } }));
 		toast(t('common.messages.deleted'));

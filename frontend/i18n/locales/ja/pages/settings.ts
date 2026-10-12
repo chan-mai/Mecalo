@@ -23,6 +23,7 @@ export default {
 		account: 'アカウント',
 		language: '言語',
 		logout: 'ログアウト',
+		logoutConfirm: 'ログアウトしますか',
 		links: {
 			about: 'データの出典とライセンス',
 			users: '利用者の管理',

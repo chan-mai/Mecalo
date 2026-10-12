@@ -10,5 +10,6 @@ useHead({ htmlAttrs: { lang: locale } });
 	<NuxtPage/>
 </NuxtLayout>
 <Toaster position="bottom-center" :offset="{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))' }"/>
+<ConfirmHost/>
 <NuxtPwaManifest/>
 </template>

@@ -5,6 +5,7 @@ import { unwrap, useApi } from '~/composables/api/client';
 import { signUpSchema } from '~/schemas/auth';
 
 const { t } = useI18n();
+const confirmDelete = useConfirmDelete();
 const { me } = useAuth();
 const onError = useErrorHandler();
 const api = useApi();
@@ -29,7 +30,7 @@ async function create() {
 }
 
 async function remove(id: string) {
-	if (!window.confirm(t('common.confirmDelete'))) return;
+	if (!await confirmDelete()) return;
 	try {
 		await unwrap(api.DELETE('/admin/users/{id}', { params: { path: { id } } }));
 		await refresh();

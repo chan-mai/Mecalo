@@ -5,6 +5,7 @@ import { weightSchema } from '~/schemas/settings';
 import { addDays, formatDate, startOfWeek, todayIso } from '~/utils/date';
 
 const { t, locale } = useI18n();
+const confirmDelete = useConfirmDelete();
 const onError = useErrorHandler();
 const api = useApi();
 const { errors, validate } = useValidation(weightSchema);
@@ -61,7 +62,7 @@ async function saveWeight() {
 }
 
 async function deleteWeight(date: string) {
-	if (!window.confirm(t('common.confirmDelete'))) return;
+	if (!await confirmDelete()) return;
 	try {
 		await unwrap(api.DELETE('/weights/{date}', { params: { path: { date } } }));
 		await refreshWeights();
