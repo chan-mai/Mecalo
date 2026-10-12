@@ -6,6 +6,7 @@ useHead({ htmlAttrs: { lang: locale } });
 <template>
 <AtmosphereBackground/>
 <IntroLoader/>
+<EntryCurtain/>
 <NuxtLayout>
 	<NuxtPage/>
 </NuxtLayout>

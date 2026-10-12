@@ -316,6 +316,11 @@ func (s *Accounts) ChangePassword(ctx context.Context, u user.User, current, nex
 	})
 }
 
+// 初回セットアップの完了
+func (s *Accounts) CompleteOnboarding(ctx context.Context, u user.User) error {
+	return s.d.Store.Users().MarkOnboarded(ctx, u.ID)
+}
+
 type ExternalIdentity struct {
 	Issuer      string
 	Subject     string

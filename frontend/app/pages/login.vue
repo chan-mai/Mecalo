@@ -7,6 +7,8 @@ definePageMeta({ layout: 'auth' });
 const { t } = useI18n();
 const route = useRoute();
 const { refresh } = useAuth();
+const curtain = useEntryCurtain();
+const submitButton = useTemplateRef<HTMLButtonElement>('submitButton');
 const onError = useErrorHandler();
 const api = useApi();
 const { errors, validate } = useValidation(credentialsSchema);
@@ -42,7 +44,7 @@ async function submit() {
 	try {
 		await unwrap(api.POST('/auth/login', { body }));
 		await refresh();
-		await navigateTo(returnTo.value);
+		await curtain.enter(() => navigateTo(returnTo.value), submitButton.value);
 	} catch (err) {
 		if (err instanceof ApiError && err.status === 401) failed.value = true;
 		else onError(err);
@@ -63,10 +65,10 @@ async function submit() {
 		<FormField v-slot="{ field }" :label="t('terms.password')" :error="errors.password">
 			<input v-bind="field" v-model="form.password" type="password" class="input" autocomplete="current-password" required>
 		</FormField>
-		<button class="btn btn-primary w-full" :disabled="busy">{{ t('pages.auth.login') }}</button>
+		<button ref="submitButton" class="btn btn-primary w-full" :disabled="busy">{{ t('pages.auth.login') }}</button>
 	</form>
 
-	<NuxtLink v-if="config?.oidcEnabled" :to="oidcHref" external class="btn btn-ghost mt-3 w-full">
+	<NuxtLink v-if="config?.oidcEnabled" :to="oidcHref" external class="btn btn-ghost mt-3 w-full" @click="curtain.markPending()">
 		{{ t('pages.auth.loginWith', { name: config.oidcName ?? 'OIDC' }) }}
 	</NuxtLink>
 

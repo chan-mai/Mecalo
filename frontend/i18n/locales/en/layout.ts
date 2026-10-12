@@ -13,7 +13,7 @@ export default {
 		admin: 'Admin',
 	},
 	syncStatus: {
-		offline: 'You are offline. Changes are saved on this device and synced when you reconnect',
+		offline: 'Failed to connect to the server. Your changes have been saved to your device and will be synced when the connection is restored.',
 		syncing: 'Syncing ({count})',
 		pending: '{count} not synced',
 		failed: '{count} changes could not be synced',

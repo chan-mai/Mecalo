@@ -71,7 +71,7 @@ func str(p *string) string {
 }
 
 func toUser(u user.User) gen.User {
-	return gen.User{Id: string(u.ID), DisplayName: u.DisplayName, Role: gen.Role(u.Role), CreatedAt: u.CreatedAt}
+	return gen.User{Id: string(u.ID), DisplayName: u.DisplayName, Role: gen.Role(u.Role), CreatedAt: u.CreatedAt, Onboarded: u.Onboarded}
 }
 
 func toAccount(a app.Account) gen.User {

@@ -17,6 +17,7 @@ type User struct {
 	DisplayName string
 	Role        Role
 	CreatedAt   time.Time
+	Onboarded   bool
 }
 
 func (u User) IsAdmin() bool {

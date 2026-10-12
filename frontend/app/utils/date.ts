@@ -13,6 +13,16 @@ export function todayIso(): string {
 	return dayjs().format(isoFormat);
 }
 
+// 今日時点の満年齢
+export function ageOf(birthDate: string): number {
+	return dayjs().diff(dayjs(birthDate, isoFormat), 'year');
+}
+
+// 1歳以上となる生年月日の上限
+export function latestBirthDate(): string {
+	return dayjs().subtract(1, 'year').format(isoFormat);
+}
+
 export function addDays(date: string, n: number): string {
 	return dayjs(date, isoFormat).add(n, 'day').format(isoFormat);
 }

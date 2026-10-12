@@ -69,6 +69,37 @@ func TestUpdateAccounts(t *testing.T) {
 	})
 }
 
+func TestCompleteOnboarding(t *testing.T) {
+	eachStore(t, func(t *testing.T, s port.Store) {
+		e := newEnv(t, s)
+
+		acc, err := e.app.Accounts.Account(e.ctx, e.bob)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if acc.Onboarded {
+			t.Error("onboarded before completion")
+		}
+		if err := e.app.Accounts.CompleteOnboarding(e.ctx, e.bob); err != nil {
+			t.Fatal(err)
+		}
+		acc, err = e.app.Accounts.Account(e.ctx, e.bob)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !acc.Onboarded {
+			t.Error("not onboarded after completion")
+		}
+		other, err := e.app.Accounts.Account(e.ctx, e.alice)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if other.Onboarded {
+			t.Error("completion affected another user")
+		}
+	})
+}
+
 func TestSetupToken(t *testing.T) {
 	eachStore(t, func(t *testing.T, s port.Store) {
 		a := app.New(app.Deps{

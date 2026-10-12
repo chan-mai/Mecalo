@@ -6,6 +6,8 @@ import { setupSchema, signUpSchema } from '~/schemas/auth';
 const props = defineProps<{ title: string; hint?: string; path: '/auth/setup' | '/auth/signup' }>();
 const { t } = useI18n();
 const { refresh } = useAuth();
+const curtain = useEntryCurtain();
+const submitButton = useTemplateRef<HTMLButtonElement>('submitButton');
 const onError = useErrorHandler();
 const signUp = useValidation(signUpSchema);
 const setup = useValidation(setupSchema);
@@ -32,7 +34,7 @@ async function submit() {
 	try {
 		if (!await post()) return;
 		await refresh();
-		await navigateTo('/settings');
+		await curtain.enter(() => navigateTo('/settings'), submitButton.value);
 	} catch (err) {
 		if (isSetup.value && err instanceof ApiError && err.status === 403) {
 			setup.errors.value = { setupToken: 'errors.auth.setupToken' };
@@ -68,6 +70,6 @@ async function submit() {
 	<FormField v-slot="{ field }" :label="t('terms.password')" :error="errors.password">
 		<input v-bind="field" v-model="form.password" type="password" class="input" autocomplete="new-password" required>
 	</FormField>
-	<button class="btn btn-primary w-full" :disabled="busy">{{ title }}</button>
+	<button ref="submitButton" class="btn btn-primary w-full" :disabled="busy">{{ title }}</button>
 </form>
 </template>

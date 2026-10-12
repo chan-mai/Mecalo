@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import { isoDate } from './common';
 import type { Schemas } from '~/composables/api/client';
 
 export const portionSchema = v.object({
@@ -33,3 +34,9 @@ export const recipeInputSchema = v.object({
 	cookedGrams: v.optional(v.pipe(v.number(), v.gtValue(0, 'errors.validation.positive'))),
 	servings: v.optional(v.pipe(v.number(), v.gtValue(0, 'errors.validation.positive'))),
 }) satisfies v.GenericSchema<unknown, Schemas['RecipeInput']>;
+
+// 食事記録の日付と区分
+export const mealPlacementSchema = v.object({
+	date: isoDate,
+	slot: v.picklist(['breakfast', 'lunch', 'dinner', 'snack']),
+}) satisfies v.GenericSchema<unknown, Schemas['UpdateMealEntry']>;

@@ -1,5 +1,6 @@
-import { createGlobalState, useLocalStorage, useOnline } from '@vueuse/core';
-import { ApiError, unwrap, useApi } from './api/client';
+import { createGlobalState, useLocalStorage } from '@vueuse/core';
+import { ApiError, isGatewayStatus, unwrap, useApi } from './api/client';
+import { useConnectivity } from './useConnectivity';
 import type { Schemas } from './api/client';
 
 // 未送信の操作, サーバ側で冪等になる形のみ扱う
@@ -18,7 +19,7 @@ export interface OutboxItem {
 }
 
 export function isNetworkError(err: unknown): boolean {
-	if (err instanceof ApiError) return err.status === 502 || err.status === 503 || err.status === 504;
+	if (err instanceof ApiError) return isGatewayStatus(err.status);
 	return err instanceof TypeError || (typeof navigator !== 'undefined' && !navigator.onLine);
 }
 
@@ -29,7 +30,7 @@ export function useOutbox() {
 	const { me } = useAuth();
 	const stored = useStoredOutbox();
 	const items = computed(() => (me.value ? stored.value[me.value.id] ?? [] : []));
-	const online = useOnline();
+	const { online } = useConnectivity();
 	const syncing = useState('outbox-syncing', () => false);
 
 	const pending = computed(() => items.value.filter((i) => !i.error));

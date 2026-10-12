@@ -3,7 +3,7 @@ import { toast } from 'vue-sonner';
 import type { Schemas } from '~/composables/api/client';
 import { ApiError, unwrap, useApi } from '~/composables/api/client';
 import { settingsSchema } from '~/schemas/settings';
-import { todayIso } from '~/utils/date';
+import { latestBirthDate, todayIso } from '~/utils/date';
 import { formatInt, unitLabel } from '~/utils/nutrients';
 
 const { t, locale, locales, setLocale } = useI18n();
@@ -116,7 +116,7 @@ async function save() {
 				<SelectField v-bind="field" v-model="profile.sex" :labelledby="labelId" :options="sexes.map((s) => ({ value: s, label: t(`terms.sex.${s}`) }))"/>
 			</FormField>
 			<FormField v-slot="{ field }" :label="t('pages.settings.birthDate')" :error="errors['profile.birthDate']">
-				<input v-bind="field" v-model="profile.birthDate" type="date" class="input" required>
+				<DateField v-bind="field" v-model="profile.birthDate" yearFirst :max="latestBirthDate()"/>
 			</FormField>
 			<FormField v-slot="{ field }" :label="t('pages.settings.height')" :error="errors['profile.heightCm']">
 				<input v-bind="field" v-model.number="profile.heightCm" type="number" inputmode="decimal" step="0.1" class="input" required>
@@ -159,7 +159,7 @@ async function save() {
 		</details>
 
 		<FormField v-slot="{ field }" :label="t('pages.settings.effectiveFrom')" :hint="t('pages.settings.effectiveFromHint')">
-			<input v-bind="field" v-model="effectiveFrom" type="date" class="input">
+			<DateField v-bind="field" v-model="effectiveFrom"/>
 		</FormField>
 		<button class="btn btn-primary w-full" :disabled="busy">{{ t('common.save') }}</button>
 	</form>
