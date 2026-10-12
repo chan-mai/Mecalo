@@ -73,7 +73,8 @@ func (s *SevenEleven) Sync(ctx context.Context, prev port.CatalogState, sink por
 	}
 	byCode := regionPages(paths)
 	for _, code := range slices.Sorted(maps.Keys(byCode)) {
-		if skipped, err := seenFresh(sink, code); skipped || err != nil {
+		ids := sevenIDs(code)
+		if skipped, err := seenFresh(sink, ids); skipped || err != nil {
 			if err != nil {
 				return prev, err
 			}
@@ -106,7 +107,7 @@ func (s *SevenEleven) Sync(ctx context.Context, prev port.CatalogState, sink por
 		}
 		// 一部の地域が取得できない場合は前回の内容を維持
 		if failed != nil {
-			if err := failSeven(sink, code, failed); err != nil {
+			if err := failAll(sink, ids, failed); err != nil {
 				return prev, err
 			}
 			continue
@@ -163,35 +164,13 @@ func regionPages(paths []string) map[string][]sevenPage {
 	return out
 }
 
-// 前回の分け方に関わらず詳細取得済みの食品があれば一覧での確認のみ
-func seenFresh(sink port.CatalogSink, code string) (bool, error) {
+// 地域指定なしと全地域の候補ID
+func sevenIDs(code string) []food.ID {
 	ids := []food.ID{food.SystemID("seven-eleven", code)}
 	for _, a := range sevenAreas {
 		ids = append(ids, food.SystemID("seven-eleven", code+"-"+a.slug))
 	}
-	skipped := false
-	for _, id := range ids {
-		if sink.Fresh(id) {
-			skipped = true
-			if err := sink.Seen(id); err != nil {
-				return true, err
-			}
-		}
-	}
-	return skipped, nil
-}
-
-// 前回の分け方が不明なため候補のID全てを失敗として通知
-func failSeven(sink port.CatalogSink, code string, err error) error {
-	if e := sink.Failed(food.SystemID("seven-eleven", code), err); e != nil {
-		return e
-	}
-	for _, a := range sevenAreas {
-		if e := sink.Failed(food.SystemID("seven-eleven", code+"-"+a.slug), err); e != nil {
-			return e
-		}
-	}
-	return nil
+	return ids
 }
 
 // 全地域で同じ値は1件, 異なる値は地域を併記して値ごとに1件

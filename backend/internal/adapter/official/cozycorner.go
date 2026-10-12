@@ -2,7 +2,6 @@ package official
 
 import (
 	"context"
-	"errors"
 	"regexp"
 	"slices"
 	"strings"
@@ -73,35 +72,14 @@ func (c *CozyCorner) Sync(ctx context.Context, prev port.CatalogState, sink port
 			continue
 		}
 		found[code] = true
-		id := food.SystemID("cozycorner", code)
-		if sink.Fresh(id) {
-			if err := sink.Seen(id); err != nil {
-				return prev, err
-			}
-			continue
-		}
-		res, err := c.Fetch.Get(ctx, c.base()+path, webfetch.Validators{})
-		if errors.Is(err, webfetch.ErrNotFound) {
-			continue
-		}
-		if err != nil {
-			if ctx.Err() != nil {
-				return prev, err
-			}
-			if err := sink.Failed(id, err); err != nil {
-				return prev, err
-			}
-			continue
-		}
-		doc, err := catalog.ParseHTML(res.Body)
+		ids := []food.ID{food.SystemID("cozycorner", code)}
+		err := fetchDetail(ctx, c.Fetch, sink, ids, c.base()+path, func(doc catalog.Node) []app.SystemFood {
+			sf, ok := parseCozyCorner(doc, code)
+			sf.URL = cozycornerBase + path
+			return single(sf, ok)
+		})
 		if err != nil {
 			return prev, err
-		}
-		if sf, ok := parseCozyCorner(doc, code); ok {
-			sf.URL = cozycornerBase + path
-			if err := sink.Emit(sf); err != nil {
-				return prev, err
-			}
 		}
 	}
 	return port.CatalogState{}, nil

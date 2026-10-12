@@ -70,36 +70,15 @@ func (k *Kourakuen) Sync(ctx context.Context, prev port.CatalogState, sink port.
 		}
 	}
 	for _, code := range codes {
-		id := food.SystemID("kourakuen", code)
-		if sink.Fresh(id) {
-			if err := sink.Seen(id); err != nil {
-				return prev, err
-			}
-			continue
-		}
+		ids := []food.ID{food.SystemID("kourakuen", code)}
 		path := "/grandmenu/info.html?id=" + code
-		res, err := k.Fetch.Get(ctx, k.base()+path, webfetch.Validators{})
-		if errors.Is(err, webfetch.ErrNotFound) {
-			continue
-		}
-		if err != nil {
-			if ctx.Err() != nil {
-				return prev, err
-			}
-			if err := sink.Failed(id, err); err != nil {
-				return prev, err
-			}
-			continue
-		}
-		doc, err := catalog.ParseHTML(res.Body)
+		err := fetchDetail(ctx, k.Fetch, sink, ids, k.base()+path, func(doc catalog.Node) []app.SystemFood {
+			sf, ok := parseKourakuen(doc, code)
+			sf.URL = kourakuenBase + path
+			return single(sf, ok)
+		})
 		if err != nil {
 			return prev, err
-		}
-		if sf, ok := parseKourakuen(doc, code); ok {
-			sf.URL = kourakuenBase + path
-			if err := sink.Emit(sf); err != nil {
-				return prev, err
-			}
 		}
 	}
 	return port.CatalogState{}, nil

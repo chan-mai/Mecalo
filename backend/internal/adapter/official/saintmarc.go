@@ -2,7 +2,6 @@ package official
 
 import (
 	"context"
-	"errors"
 	"regexp"
 	"strings"
 
@@ -59,36 +58,15 @@ func (s *SaintMarc) Sync(ctx context.Context, prev port.CatalogState, sink port.
 		for _, code := range codes {
 			// 商品コードはブランド間で重複
 			ref := brand.code + "-" + code
-			id := food.SystemID("saint-marc", ref)
-			if sink.Fresh(id) {
-				if err := sink.Seen(id); err != nil {
-					return prev, err
-				}
-				continue
-			}
+			ids := []food.ID{food.SystemID("saint-marc", ref)}
 			path := "/allergy_check/brand/" + brand.code + "/detail/" + code
-			res, err := s.Fetch.Get(ctx, s.base()+path, webfetch.Validators{})
-			if errors.Is(err, webfetch.ErrNotFound) {
-				continue
-			}
-			if err != nil {
-				if ctx.Err() != nil {
-					return prev, err
-				}
-				if err := sink.Failed(id, err); err != nil {
-					return prev, err
-				}
-				continue
-			}
-			doc, err := catalog.ParseHTML(res.Body)
+			err := fetchDetail(ctx, s.Fetch, sink, ids, s.base()+path, func(doc catalog.Node) []app.SystemFood {
+				sf, ok := parseSaintMarc(doc, brand.name, ref)
+				sf.URL = saintMarcBase + path
+				return single(sf, ok)
+			})
 			if err != nil {
 				return prev, err
-			}
-			if sf, ok := parseSaintMarc(doc, brand.name, ref); ok {
-				sf.URL = saintMarcBase + path
-				if err := sink.Emit(sf); err != nil {
-					return prev, err
-				}
 			}
 		}
 	}

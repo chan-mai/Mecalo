@@ -2,7 +2,6 @@ package official
 
 import (
 	"context"
-	"errors"
 	"regexp"
 	"strconv"
 	"strings"
@@ -62,35 +61,16 @@ func (d *Doutor) Sync(ctx context.Context, prev port.CatalogState, sink port.Cat
 		}
 		for _, code := range codes {
 			ref := brand.slug + "-" + code
-			if skipped, err := doutorSeenFresh(sink, ref); skipped || err != nil {
-				if err != nil {
-					return prev, err
-				}
-				continue
-			}
 			path := "/allergy_check/" + brand.slug + "/item/detail/" + code
-			res, err := d.Fetch.Get(ctx, d.base()+path, webfetch.Validators{})
-			if errors.Is(err, webfetch.ErrNotFound) {
-				continue
-			}
-			if err != nil {
-				if ctx.Err() != nil {
-					return prev, err
+			err := fetchDetail(ctx, d.Fetch, sink, doutorIDs(ref), d.base()+path, func(doc catalog.Node) []app.SystemFood {
+				out := parseDoutor(doc, brand, ref)
+				for i := range out {
+					out[i].URL = doutorBase + path
 				}
-				if err := doutorFailed(sink, ref, err); err != nil {
-					return prev, err
-				}
-				continue
-			}
-			doc, err := catalog.ParseHTML(res.Body)
+				return out
+			})
 			if err != nil {
 				return prev, err
-			}
-			for _, sf := range parseDoutor(doc, brand, ref) {
-				sf.URL = doutorBase + path
-				if err := sink.Emit(sf); err != nil {
-					return prev, err
-				}
 			}
 		}
 	}
@@ -126,28 +106,6 @@ func doutorIDs(ref string) []food.ID {
 		ids = append(ids, food.SystemID("doutor-group", ref+"-"+strconv.Itoa(i)))
 	}
 	return ids
-}
-
-func doutorSeenFresh(sink port.CatalogSink, ref string) (bool, error) {
-	skipped := false
-	for _, id := range doutorIDs(ref) {
-		if sink.Fresh(id) {
-			skipped = true
-			if err := sink.Seen(id); err != nil {
-				return true, err
-			}
-		}
-	}
-	return skipped, nil
-}
-
-func doutorFailed(sink port.CatalogSink, ref string, err error) error {
-	for _, id := range doutorIDs(ref) {
-		if e := sink.Failed(id, err); e != nil {
-			return e
-		}
-	}
-	return nil
 }
 
 // サイズのタブごとに1件, タブなしは1件

@@ -2,7 +2,6 @@ package official
 
 import (
 	"context"
-	"errors"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -60,35 +59,16 @@ func (g *Godiva) Sync(ctx context.Context, prev port.CatalogState, sink port.Cat
 		return prev, err
 	}
 	for _, slug := range godivaSlugs(doc) {
-		if skipped, err := godivaSeenFresh(sink, slug); skipped || err != nil {
-			if err != nil {
-				return prev, err
-			}
-			continue
-		}
 		path := godivaPath + slug + ".html"
-		res, err := g.Fetch.Get(ctx, g.base()+path, webfetch.Validators{})
-		if errors.Is(err, webfetch.ErrNotFound) {
-			continue
-		}
-		if err != nil {
-			if ctx.Err() != nil {
-				return prev, err
+		err := fetchDetail(ctx, g.Fetch, sink, godivaIDs(slug), g.base()+path, func(doc catalog.Node) []app.SystemFood {
+			out := parseGodiva(doc, slug)
+			for i := range out {
+				out[i].URL = godivaBase + path
 			}
-			if err := godivaFailed(sink, slug, err); err != nil {
-				return prev, err
-			}
-			continue
-		}
-		doc, err := catalog.ParseHTML(res.Body)
+			return out
+		})
 		if err != nil {
 			return prev, err
-		}
-		for _, sf := range parseGodiva(doc, slug) {
-			sf.URL = godivaBase + path
-			if err := sink.Emit(sf); err != nil {
-				return prev, err
-			}
 		}
 	}
 	return port.CatalogState{}, nil
@@ -118,27 +98,13 @@ func godivaID(slug string, row int) food.ID {
 	return food.SystemID("godiva", slug+"-"+strconv.Itoa(row))
 }
 
-// サイズ数上限までの候補IDを確認
-func godivaSeenFresh(sink port.CatalogSink, slug string) (bool, error) {
-	skipped := false
+// サイズ数上限までの候補ID
+func godivaIDs(slug string) []food.ID {
+	ids := make([]food.ID, 0, godivaSizes)
 	for row := 1; row <= godivaSizes; row++ {
-		if id := godivaID(slug, row); sink.Fresh(id) {
-			skipped = true
-			if err := sink.Seen(id); err != nil {
-				return true, err
-			}
-		}
+		ids = append(ids, godivaID(slug, row))
 	}
-	return skipped, nil
-}
-
-func godivaFailed(sink port.CatalogSink, slug string, err error) error {
-	for row := 1; row <= godivaSizes; row++ {
-		if e := sink.Failed(godivaID(slug, row), err); e != nil {
-			return e
-		}
-	}
-	return nil
+	return ids
 }
 
 // サイズ別の行ごとに1件

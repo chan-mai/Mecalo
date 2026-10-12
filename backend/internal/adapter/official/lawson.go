@@ -2,7 +2,6 @@ package official
 
 import (
 	"context"
-	"errors"
 	"regexp"
 	"strings"
 
@@ -65,35 +64,14 @@ func (l *Lawson) Sync(ctx context.Context, prev port.CatalogState, sink port.Cat
 	}
 	for _, path := range paths {
 		code := lawsonItem.FindStringSubmatch(path)[1]
-		id := food.SystemID("lawson", code)
-		if sink.Fresh(id) {
-			if err := sink.Seen(id); err != nil {
-				return prev, err
-			}
-			continue
-		}
-		res, err := l.Fetch.Get(ctx, l.base()+path, webfetch.Validators{})
-		if errors.Is(err, webfetch.ErrNotFound) {
-			continue
-		}
-		if err != nil {
-			if ctx.Err() != nil {
-				return prev, err
-			}
-			if err := sink.Failed(id, err); err != nil {
-				return prev, err
-			}
-			continue
-		}
-		doc, err := catalog.ParseHTML(res.Body)
+		ids := []food.ID{food.SystemID("lawson", code)}
+		err := fetchDetail(ctx, l.Fetch, sink, ids, l.base()+path, func(doc catalog.Node) []app.SystemFood {
+			sf, ok := parseLawson(doc, code)
+			sf.URL = lawsonBase + path
+			return single(sf, ok)
+		})
 		if err != nil {
 			return prev, err
-		}
-		if sf, ok := parseLawson(doc, code); ok {
-			sf.URL = lawsonBase + path
-			if err := sink.Emit(sf); err != nil {
-				return prev, err
-			}
 		}
 	}
 	return port.CatalogState{}, nil

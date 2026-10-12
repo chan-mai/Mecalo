@@ -2,7 +2,6 @@ package official
 
 import (
 	"context"
-	"errors"
 	"regexp"
 	"strings"
 
@@ -70,30 +69,12 @@ func (m *Matsunoya) Sync(ctx context.Context, prev port.CatalogState, sink port.
 }
 
 func (m *Matsunoya) item(ctx context.Context, path, slug string, sink port.CatalogSink) error {
-	id := food.SystemID("matsunoya", slug)
-	if sink.Fresh(id) {
-		return sink.Seen(id)
-	}
-	res, err := m.Fetch.Get(ctx, m.base()+path, webfetch.Validators{})
-	if errors.Is(err, webfetch.ErrNotFound) {
-		return nil
-	}
-	if err != nil {
-		if ctx.Err() != nil {
-			return err
-		}
-		return sink.Failed(id, err)
-	}
-	doc, err := catalog.ParseHTML(res.Body)
-	if err != nil {
-		return err
-	}
-	sf, ok := parseMatsunoya(doc, slug)
-	if !ok {
-		return nil
-	}
-	sf.URL = matsunoyaBase + path
-	return sink.Emit(sf)
+	ids := []food.ID{food.SystemID("matsunoya", slug)}
+	return fetchDetail(ctx, m.Fetch, sink, ids, m.base()+path, func(doc catalog.Node) []app.SystemFood {
+		sf, ok := parseMatsunoya(doc, slug)
+		sf.URL = matsunoyaBase + path
+		return single(sf, ok)
+	})
 }
 
 // 「カロリー／1325kcal」形式の先頭の表示

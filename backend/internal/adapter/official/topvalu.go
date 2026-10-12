@@ -88,25 +88,12 @@ func (t *Topvalu) Sync(ctx context.Context, prev port.CatalogState, sink port.Ca
 }
 
 func (t *Topvalu) item(ctx context.Context, jan string, sink port.CatalogSink) error {
-	id := food.SystemID("topvalu", jan)
-	if sink.Fresh(id) {
-		return sink.Seen(id)
-	}
-	url := t.base() + "/items/detail/" + jan
-	res, err := t.Fetch.Get(ctx, url, webfetch.Validators{})
-	if err != nil {
-		return err
-	}
-	doc, err := catalog.ParseHTML(res.Body)
-	if err != nil {
-		return err
-	}
-	sf, ok := parseTopvalu(doc, jan)
-	if !ok {
-		return nil
-	}
-	sf.URL = topvaluBase + "/items/detail/" + jan
-	return sink.Emit(sf)
+	ids := []food.ID{food.SystemID("topvalu", jan)}
+	return fetchDetail(ctx, t.Fetch, sink, ids, t.base()+"/items/detail/"+jan, func(doc catalog.Node) []app.SystemFood {
+		sf, ok := parseTopvalu(doc, jan)
+		sf.URL = topvaluBase + "/items/detail/" + jan
+		return single(sf, ok)
+	})
 }
 
 func parseTopvalu(doc catalog.Node, jan string) (app.SystemFood, bool) {

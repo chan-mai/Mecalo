@@ -86,30 +86,12 @@ func (k *Kiyoken) Sync(ctx context.Context, prev port.CatalogState, sink port.Ca
 }
 
 func (k *Kiyoken) item(ctx context.Context, path, slug string, sink port.CatalogSink) error {
-	id := food.SystemID("kiyoken", slug)
-	if sink.Fresh(id) {
-		return sink.Seen(id)
-	}
-	res, err := k.Fetch.Get(ctx, k.base()+path, webfetch.Validators{})
-	if errors.Is(err, webfetch.ErrNotFound) {
-		return nil
-	}
-	if err != nil {
-		if ctx.Err() != nil {
-			return err
-		}
-		return sink.Failed(id, err)
-	}
-	doc, err := catalog.ParseHTML(res.Body)
-	if err != nil {
-		return err
-	}
-	sf, ok := parseKiyoken(doc, slug)
-	if !ok {
-		return nil
-	}
-	sf.URL = kiyokenBase + path
-	return sink.Emit(sf)
+	ids := []food.ID{food.SystemID("kiyoken", slug)}
+	return fetchDetail(ctx, k.Fetch, sink, ids, k.base()+path, func(doc catalog.Node) []app.SystemFood {
+		sf, ok := parseKiyoken(doc, slug)
+		sf.URL = kiyokenBase + path
+		return single(sf, ok)
+	})
 }
 
 func parseKiyoken(doc catalog.Node, slug string) (app.SystemFood, bool) {

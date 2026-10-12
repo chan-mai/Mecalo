@@ -2,7 +2,6 @@ package official
 
 import (
 	"context"
-	"errors"
 	"net/url"
 	"regexp"
 	"strings"
@@ -60,36 +59,15 @@ func (h *Horai551) Sync(ctx context.Context, prev port.CatalogState, sink port.C
 	}
 	for _, path := range paths {
 		slug := horai551Item.FindStringSubmatch(path)[1]
-		id := food.SystemID("horai551", slug)
-		if sink.Fresh(id) {
-			if err := sink.Seen(id); err != nil {
-				return prev, err
-			}
-			continue
-		}
+		ids := []food.ID{food.SystemID("horai551", slug)}
 		escaped := (&url.URL{Path: path}).EscapedPath()
-		res, err := h.Fetch.Get(ctx, h.base()+escaped, webfetch.Validators{})
-		if errors.Is(err, webfetch.ErrNotFound) {
-			continue
-		}
-		if err != nil {
-			if ctx.Err() != nil {
-				return prev, err
-			}
-			if err := sink.Failed(id, err); err != nil {
-				return prev, err
-			}
-			continue
-		}
-		doc, err := catalog.ParseHTML(res.Body)
+		err := fetchDetail(ctx, h.Fetch, sink, ids, h.base()+escaped, func(doc catalog.Node) []app.SystemFood {
+			sf, ok := parseHorai551(doc, slug)
+			sf.URL = horai551Base + escaped
+			return single(sf, ok)
+		})
 		if err != nil {
 			return prev, err
-		}
-		if sf, ok := parseHorai551(doc, slug); ok {
-			sf.URL = horai551Base + escaped
-			if err := sink.Emit(sf); err != nil {
-				return prev, err
-			}
 		}
 	}
 	return port.CatalogState{}, nil
