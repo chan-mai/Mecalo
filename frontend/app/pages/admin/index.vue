@@ -4,6 +4,7 @@ const { t } = useI18n();
 
 const items = [
 	{ to: '/admin/users', icon: 'lucide:users', key: 'users' },
+	{ to: '/admin/settings', icon: 'lucide:sliders-horizontal', key: 'settings' },
 	{ to: '/admin/sources', icon: 'lucide:database', key: 'sources' },
 ] as const;
 </script>
