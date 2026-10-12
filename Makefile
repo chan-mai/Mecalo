@@ -19,7 +19,7 @@ test-cockroach:
 	cd backend && MECALO_TEST_POSTGRES_DSN=$${MECALO_TEST_POSTGRES_DSN:-postgresql://root@localhost:26257/defaultdb?sslmode=disable} go test ./internal/app/...
 
 dev-backend:
-	cd backend && go run ./cmd/mecalo serve
+	cd backend && go tool air
 
 dev-frontend:
 	pnpm --filter @mecalo/frontend dev

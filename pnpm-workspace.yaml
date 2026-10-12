@@ -1,5 +1,6 @@
 packages:
   - api
+  - backend
   - frontend
 
 # 公開後7日未満
