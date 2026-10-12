@@ -60,7 +60,7 @@ paths:
   /admin/sources/{id}/sync:
     post:
       operationId: AdminSourcesApi_sync
-      description: 商品一覧の同期をバックグラウンドで開始
+      description: 商品一覧の同期を開始
       parameters:
         - name: id
           in: path

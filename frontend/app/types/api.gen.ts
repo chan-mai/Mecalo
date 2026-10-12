@@ -30,7 +30,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 商品一覧の同期をバックグラウンドで開始 */
+        /** @description 商品一覧の同期を開始 */
         post: operations["AdminSourcesApi_sync"];
         delete?: never;
         options?: never;
