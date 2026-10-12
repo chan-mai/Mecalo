@@ -134,6 +134,7 @@ async function onBarcode(code: string) {
 		<TransitionGroup v-else tag="ul" name="list" class="relative divide-y divide-[var(--hairline)]" appear>
 			<FoodRow v-for="f in results" :key="f.id" :food="f" @select="selectResult(f)"/>
 		</TransitionGroup>
+		<ExternalResults v-if="!searching" :query="query.trim()" @select="selectResult"/>
 	</template>
 
 	<template v-else-if="quickPicks">

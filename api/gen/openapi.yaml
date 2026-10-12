@@ -17,6 +17,91 @@ tags:
   - name: data
   - name: system
 paths:
+  /admin/sources:
+    get:
+      operationId: AdminSourcesApi_list
+      description: 有効な外部取得元と同期状態
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Source'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - admin
+  /admin/sources/{id}/sync:
+    post:
+      operationId: AdminSourcesApi_sync
+      description: 商品一覧の同期をバックグラウンドで開始
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: The request has been accepted for processing, but processing has not yet completed.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - admin
   /admin/users:
     get:
       operationId: AdminApi_list
@@ -751,6 +836,93 @@ paths:
                 $ref: '#/components/schemas/Problem'
       tags:
         - foods
+  /foods/external:
+    get:
+      operationId: FoodsApi_searchExternal
+      description: 外部取得元の名前検索, 利用者の操作時のみ
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalSearchResult'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+    post:
+      operationId: FoodsApi_saveExternal
+      description: 外部検索の結果をシステム食品として保存
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Food'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - foods
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalFoodSelection'
   /foods/mine:
     get:
       operationId: FoodsApi_listMine
@@ -2232,6 +2404,23 @@ components:
         oidcName:
           type: string
           description: ログイン画面に表示するOIDCプロバイダ名
+    Basis:
+      type: object
+      required:
+        - unit
+      properties:
+        unit:
+          type: string
+          minLength: 1
+          maxLength: 30
+          description: 1個, 1食等
+        grams:
+          type: number
+          format: double
+          description: 1単位の重量(g), 省略は不明
+          minimum: 0
+          exclusiveMinimum: true
+      description: 栄養値の基準量, 省略は可食部100g
     CopyMeals:
       type: object
       required:
@@ -2464,6 +2653,71 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/RecipeComposition'
           description: recipe種別のみ, キーはリビジョンID
+    ExternalFood:
+      type: object
+      required:
+        - datasetId
+        - datasetName
+        - reference
+        - name
+        - brand
+        - nutrients
+        - portions
+      properties:
+        datasetId:
+          type: string
+        datasetName:
+          type: string
+          description: 取得元の表示名
+        reference:
+          type: string
+        name:
+          type: string
+        brand:
+          type: string
+        nutrients:
+          $ref: '#/components/schemas/NutrientProfile'
+        basis:
+          $ref: '#/components/schemas/Basis'
+        portions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Portion'
+        savedId:
+          type: string
+          description: 保存済みの場合の食品ID
+      description: 外部取得元の検索結果1件, 未保存
+    ExternalFoodSelection:
+      type: object
+      required:
+        - datasetId
+        - reference
+      properties:
+        datasetId:
+          type: string
+        reference:
+          type: string
+    ExternalSearchResult:
+      type: object
+      required:
+        - foods
+        - failed
+        - attributions
+      properties:
+        foods:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalFood'
+        failed:
+          type: array
+          items:
+            type: string
+          description: 取得できなかった取得元
+        attributions:
+          type: array
+          items:
+            type: string
+          description: 結果に含まれる取得元の帰属表示
     Food:
       type: object
       required:
@@ -2473,6 +2727,7 @@ components:
         - editable
         - favorite
         - deleted
+        - discontinued
         - revision
       properties:
         id:
@@ -2488,6 +2743,9 @@ components:
           type: boolean
         deleted:
           type: boolean
+        discontinued:
+          type: boolean
+          description: 取得元の一覧から消えた食品, 検索対象外
         revision:
           $ref: '#/components/schemas/FoodRevision'
     FoodInput:
@@ -2514,6 +2772,8 @@ components:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/NutrientInput'
+        basis:
+          $ref: '#/components/schemas/Basis'
         portions:
           type: array
           items:
@@ -2555,7 +2815,9 @@ components:
         nutrients:
           allOf:
             - $ref: '#/components/schemas/NutrientProfile'
-          description: 可食部100gあたり
+          description: 可食部100gあたり, basis指定時はその1単位あたり
+        basis:
+          $ref: '#/components/schemas/Basis'
         portions:
           type: array
           items:
@@ -2580,12 +2842,20 @@ components:
       required:
         - datasetId
         - reference
+        - url
       properties:
         datasetId:
           type: string
         reference:
           type: string
           description: 食品番号, バーコード等
+        url:
+          type: string
+          description: 取得元ページ, 空は取込元全体
+        retrievedAt:
+          type: string
+          format: date-time
+          description: 取得日時
     Goal:
       type: string
       enum:
@@ -3129,6 +3399,38 @@ components:
           minLength: 8
         displayName:
           type: string
+    Source:
+      type: object
+      required:
+        - dataset
+        - kind
+        - error
+        - items
+        - running
+      properties:
+        dataset:
+          $ref: '#/components/schemas/Dataset'
+        kind:
+          $ref: '#/components/schemas/SourceKind'
+        syncedAt:
+          type: string
+          format: date-time
+        error:
+          type: string
+          description: 直近の同期の失敗内容, 空は成功
+        items:
+          type: integer
+          format: int32
+          description: 直近の同期で確認した商品数
+        running:
+          type: boolean
+          description: 同期中
+    SourceKind:
+      type: string
+      enum:
+        - lookup
+        - finder
+        - catalog
     TargetOverride:
       type: object
       required:

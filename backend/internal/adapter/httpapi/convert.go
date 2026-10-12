@@ -3,6 +3,7 @@ package httpapi
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/shopspring/decimal"
@@ -152,7 +153,35 @@ func fromPortions(ps []gen.Portion) []food.Portion {
 }
 
 func toSource(s food.Source) gen.FoodSource {
-	return gen.FoodSource{DatasetId: string(s.DatasetID), Reference: s.Reference}
+	out := gen.FoodSource{DatasetId: string(s.DatasetID), Reference: s.Reference, Url: s.URL}
+	if !s.RetrievedAt.IsZero() {
+		t := s.RetrievedAt
+		out.RetrievedAt = &t
+	}
+	return out
+}
+
+func toBasis(b food.Basis) *gen.Basis {
+	if !b.PerUnit() {
+		return nil
+	}
+	out := &gen.Basis{Unit: b.Unit}
+	if b.Grams.IsPositive() {
+		g := b.Grams.InexactFloat64()
+		out.Grams = &g
+	}
+	return out
+}
+
+func fromBasis(b *gen.Basis) food.Basis {
+	if b == nil {
+		return food.Basis{}
+	}
+	out := food.Basis{Unit: strings.TrimSpace(b.Unit)}
+	if b.Grams != nil {
+		out.Grams = decimal.NewFromFloat(*b.Grams)
+	}
+	return out
 }
 
 func toRevision(r food.Revision) gen.FoodRevision {
@@ -163,6 +192,7 @@ func toRevision(r food.Revision) gen.FoodRevision {
 		Brand:     r.Brand,
 		Aliases:   nonNil(r.Aliases),
 		Nutrients: toProfile(r.Nutrients),
+		Basis:     toBasis(r.Basis),
 		Portions:  toPortions(r.Portions),
 		Source:    toSource(r.Source),
 		CreatedAt: r.CreatedAt,
@@ -182,22 +212,65 @@ func fromRevision(foodID food.ID, r gen.FoodRevision) (food.Revision, error) {
 		Brand:     r.Brand,
 		Aliases:   r.Aliases,
 		Nutrients: p,
+		Basis:     fromBasis(r.Basis),
 		Portions:  fromPortions(r.Portions),
-		Source:    food.Source{DatasetID: food.DatasetID(r.Source.DatasetId), Reference: r.Source.Reference},
+		Source:    fromSource(r.Source),
 		CreatedAt: r.CreatedAt,
 	}, nil
 }
 
 func toFood(v app.FoodView, viewer user.ID) gen.Food {
 	return gen.Food{
-		Id:       string(v.Food.ID),
-		Kind:     gen.FoodKind(v.Food.Kind),
-		Barcode:  v.Food.Barcode,
-		Editable: v.Food.EditableBy(viewer),
-		Favorite: v.Favorite,
-		Deleted:  v.Food.Deleted(),
-		Revision: toRevision(v.Revision),
+		Id:           string(v.Food.ID),
+		Kind:         gen.FoodKind(v.Food.Kind),
+		Barcode:      v.Food.Barcode,
+		Editable:     v.Food.EditableBy(viewer),
+		Favorite:     v.Favorite,
+		Deleted:      v.Food.Deleted(),
+		Discontinued: v.Food.Discontinued(),
+		Revision:     toRevision(v.Revision),
 	}
+}
+
+func fromSource(s gen.FoodSource) food.Source {
+	out := food.Source{DatasetID: food.DatasetID(s.DatasetId), Reference: s.Reference, URL: s.Url}
+	if s.RetrievedAt != nil {
+		out.RetrievedAt = *s.RetrievedAt
+	}
+	return out
+}
+
+func toExternalFood(h app.ExternalHit) gen.ExternalFood {
+	out := gen.ExternalFood{
+		DatasetId:   string(h.Dataset.ID),
+		DatasetName: h.Dataset.Name,
+		Reference:   h.Food.Reference,
+		Name:        h.Food.Name,
+		Brand:       h.Food.Brand,
+		Nutrients:   toProfile(h.Food.Nutrients),
+		Basis:       toBasis(h.Food.Basis),
+		Portions:    toPortions(h.Food.Portions),
+	}
+	if h.SavedID != "" {
+		id := string(h.SavedID)
+		out.SavedId = &id
+	}
+	return out
+}
+
+func toSourceInfo(s app.SourceInfo) gen.Source {
+	out := gen.Source{
+		Dataset: toDataset(s.Dataset),
+		Kind:    gen.SourceKind(s.Kind),
+		Error:   s.Status.Error,
+		Items:   int32(s.Status.Items),
+		Running: s.Running,
+	}
+	if !s.Status.SyncedAt.IsZero() {
+		t := s.Status.SyncedAt
+		out.SyncedAt = &t
+	}
+	return out
 }
 
 func toFoods(vs []app.FoodView, viewer user.ID) []gen.Food {
@@ -213,7 +286,7 @@ func fromFoodInput(in gen.FoodInput) (app.FoodInput, error) {
 	if err != nil {
 		return app.FoodInput{}, err
 	}
-	out := app.FoodInput{Name: in.Name, Brand: str(in.Brand), Barcode: str(in.Barcode), Nutrients: p}
+	out := app.FoodInput{Name: in.Name, Brand: str(in.Brand), Barcode: str(in.Barcode), Nutrients: p, Basis: fromBasis(in.Basis)}
 	if in.Aliases != nil {
 		out.Aliases = *in.Aliases
 	}
@@ -268,7 +341,7 @@ func fromEntry(uid user.ID, e gen.MealEntry) (meal.Entry, error) {
 		FoodRevisionID: food.RevisionID(e.FoodRevisionId),
 		FoodName:       e.FoodName,
 		Brand:          e.Brand,
-		Source:         food.Source{DatasetID: food.DatasetID(e.Source.DatasetId), Reference: e.Source.Reference},
+		Source:         fromSource(e.Source),
 		Quantity:       fromQuantity(e.Quantity),
 		Grams:          dec(e.Grams),
 		Nutrients:      p,

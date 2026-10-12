@@ -23,12 +23,21 @@ const snapshotFood = computed<Schemas['Food'] | undefined>(() => {
 	const entry = props.entry;
 	const current = food.value;
 	if (!entry || !current) return undefined;
-	const per100 = entry.grams > 0 ? Object.fromEntries(Object.entries(entry.nutrients).map(([k, v]) => [k, { ...v, amount: v.amount * 100 / entry.grams }])) : {};
+	const scaled = (factor: number) => Object.fromEntries(Object.entries(entry.nutrients).map(([k, v]) => [k, { ...v, amount: v.amount * factor }]));
+	// 重量不明は記録した単位1つあたりの値
+	if (entry.grams <= 0) {
+		const basis = { unit: entry.quantity.unit };
+		return { ...current, revision: { ...current.revision, name: entry.foodName, brand: entry.brand, nutrients: scaled(1 / entry.quantity.amount), basis, portions: [] } };
+	}
+	const per100 = scaled(100 / entry.grams);
 	const portions = current.revision.id === entry.foodRevisionId ? [...current.revision.portions] : [];
+	if (current.revision.basis && current.revision.id === entry.foodRevisionId && current.revision.basis.grams) {
+		portions.unshift({ unit: current.revision.basis.unit, grams: current.revision.basis.grams });
+	}
 	if (entry.quantity.unit !== 'g' && !portions.some((p) => p.unit === entry.quantity.unit)) {
 		portions.unshift({ unit: entry.quantity.unit, grams: entry.grams / entry.quantity.amount });
 	}
-	return { ...current, revision: { ...current.revision, name: entry.foodName, brand: entry.brand, nutrients: per100, portions } };
+	return { ...current, revision: { ...current.revision, name: entry.foodName, brand: entry.brand, nutrients: per100, basis: undefined, portions } };
 });
 
 watch(() => props.entry, async (entry) => {
@@ -40,7 +49,7 @@ watch(() => props.entry, async (entry) => {
 		food.value = await unwrap(api.GET('/foods/{id}', { params: { path: { id: entry.foodId } } }));
 	} catch {
 		food.value = {
-			id: entry.foodId, kind: 'custom', barcode: '', editable: false, favorite: false, deleted: true,
+			id: entry.foodId, kind: 'custom', barcode: '', editable: false, favorite: false, deleted: true, discontinued: false,
 			revision: { id: entry.foodRevisionId, number: 0, name: entry.foodName, brand: entry.brand, aliases: [], nutrients: {}, portions: [], source: entry.source, createdAt: entry.createdAt },
 		};
 	}

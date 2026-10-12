@@ -67,3 +67,16 @@ namespace AdminApi {
   @post op create(@body body: CreateUserRequest): User | CommonErrors | Conflict;
   @delete op delete(@path id: string): NoContentResponse | CommonErrors;
 }
+
+@route("/admin/sources")
+@tag("admin")
+namespace AdminSourcesApi {
+  @doc("有効な外部取得元と同期状態")
+  @get
+  op list(): Source[] | CommonErrors;
+
+  @doc("商品一覧の同期を開始")
+  @post
+  @route("/{id}/sync")
+  op sync(@path id: string): AcceptedResponse | CommonErrors | Conflict;
+}

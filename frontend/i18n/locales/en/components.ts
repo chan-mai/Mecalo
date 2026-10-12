@@ -14,6 +14,11 @@ export default {
 		barcodeNotFound: 'No matching food',
 		empty: 'Nothing recorded yet. Search to add your first food',
 	},
+	externalResults: {
+		search: 'Search external sources',
+		title: 'External sources',
+		failed: 'Some sources could not be reached',
+	},
 	barcodeScanner: {
 		title: 'Scan a barcode',
 		unsupported: 'Barcode scanning is not supported on this device. Enter the number instead',

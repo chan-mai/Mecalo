@@ -12,6 +12,11 @@ export default {
 		barcodeNotFound: '該当する食品がありません',
 		empty: 'まだ記録がありません。検索して最初の食品を追加しましょう',
 	},
+	externalResults: {
+		search: '外部のデータも検索',
+		title: '外部のデータ',
+		failed: '一部の取得元に接続できませんでした',
+	},
 	barcodeScanner: {
 		title: 'バーコードを読み取る',
 		unsupported: 'この端末ではバーコード読み取りに対応していません。番号を入力してください',

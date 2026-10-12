@@ -15,6 +15,10 @@ export const foodInputSchema = v.object({
 		amount: v.optional(v.pipe(v.number(), v.minValue(0, 'errors.validation.positive'))),
 		status: v.optional(v.picklist(['measured', 'estimated', 'trace', 'missing'])),
 	})),
+	basis: v.optional(v.object({
+		unit: v.pipe(v.string(), v.trim(), v.minLength(1, 'errors.validation.required'), v.maxLength(30, 'errors.validation.maxLength'), v.notValue('g', 'errors.validation.required')),
+		grams: v.optional(v.pipe(v.number('errors.validation.number'), v.gtValue(0, 'errors.validation.positive'))),
+	})),
 	portions: v.optional(v.array(portionSchema)),
 }) satisfies v.GenericSchema<unknown, Schemas['FoodInput']>;
 

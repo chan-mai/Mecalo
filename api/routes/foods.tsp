@@ -23,6 +23,16 @@ namespace FoodsApi {
   @route("/mine")
   op listMine(): Food[] | CommonErrors;
 
+  @doc("外部取得元の名前検索, 利用者の操作時のみ")
+  @get
+  @route("/external")
+  op searchExternal(@query q: string): ExternalSearchResult | CommonErrors;
+
+  @doc("外部検索の結果をシステム食品として保存")
+  @post
+  @route("/external")
+  op saveExternal(@body body: ExternalFoodSelection): Food | CommonErrors;
+
   @doc("ローカルDB優先, 未登録時は外部照会が有効な場合のみ照会")
   @get
   @route("/barcode")
