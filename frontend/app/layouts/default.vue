@@ -21,7 +21,7 @@ function active(to: string): boolean {
 <div class="mx-auto flex min-h-dvh max-w-xl flex-col">
 	<NuxtLink to="#main" external class="skip-link">{{ t('layout.skipToContent') }}</NuxtLink>
 	<header class="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top))]">
-		<NuxtLink to="/" class="display text-sm tracking-[0.3em]">{{ t('layout.appName').toUpperCase() }}</NuxtLink>
+		<NuxtLink to="/" class="block"><img src="/logo.svg" :alt="t('layout.appName')" width="427" height="76" class="h-6 w-auto"></NuxtLink>
 	</header>
 	<main id="main" tabindex="-1" class="flex-1 px-5 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))]">
 		<SyncStatus/>

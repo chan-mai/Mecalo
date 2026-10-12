@@ -1,5 +1,11 @@
 # Mecalo
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./frontend/public/logo-dark.svg">
+  <img src="./frontend/public/logo.svg" alt="Mecalo" width="320">
+</picture>
+<br />
+
 [![CI](https://img.shields.io/github/actions/workflow/status/chan-mai/Mecalo/ci.yaml?branch=develop&style=flat-square&logo=github&logoColor=white&label=CI&color=B9DEFF)](https://github.com/chan-mai/Mecalo/actions/workflows/ci.yaml)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-B9DEFF?style=flat-square)](./LICENSE)
 
