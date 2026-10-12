@@ -74,6 +74,14 @@ func toUser(u user.User) gen.User {
 	return gen.User{Id: string(u.ID), DisplayName: u.DisplayName, Role: gen.Role(u.Role), CreatedAt: u.CreatedAt}
 }
 
+func toAccount(a app.Account) gen.User {
+	out := toUser(a.User)
+	if a.LoginName != "" {
+		out.LoginName = &a.LoginName
+	}
+	return out
+}
+
 func toNutrientValue(v nutrient.Value) gen.NutrientValue {
 	return gen.NutrientValue{Amount: f64(v.Amount), Status: gen.NutrientStatus(v.Status), Coverage: f64(v.Coverage)}
 }

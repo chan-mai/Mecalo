@@ -29,6 +29,7 @@ export default {
 			weight: '体重の推移',
 			data: 'データのエクスポート・取込',
 			password: 'パスワード変更',
+			account: 'アカウント',
 		},
 	},
 	password: {
@@ -147,7 +148,18 @@ export default {
 	},
 	admin: {
 		title: '利用者',
-		create: '利用者を作成',
+		create: 'ユーザー作成',
 		role: '権限',
+		externalOnly: 'OpenID Connectのみ(ログイン名なし)',
+	},
+	adminUser: {
+		reset: 'パスワードを再設定',
+		resetConfirm: 'パスワードを再設定しますか',
+		resetMessage: 'この利用者はすべての端末でログアウトされます',
+		resetDone: 'パスワードを再設定しました',
+		delete: 'この利用者を削除',
+	},
+	account: {
+		title: 'アカウント',
 	},
 };

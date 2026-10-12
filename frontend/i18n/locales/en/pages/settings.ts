@@ -31,6 +31,7 @@ export default {
 			weight: 'Weight trend',
 			data: 'Export and import',
 			password: 'Change password',
+			account: 'Account',
 		},
 	},
 	password: {
@@ -151,5 +152,16 @@ export default {
 		title: 'Users',
 		create: 'Create user',
 		role: 'Role',
+		externalOnly: 'OpenID Connect only (no login name)',
+	},
+	adminUser: {
+		reset: 'Reset password',
+		resetConfirm: 'Reset the password?',
+		resetMessage: 'This user will be logged out on all devices',
+		resetDone: 'Password has been reset',
+		delete: 'Delete this user',
+	},
+	account: {
+		title: 'Account',
 	},
 } satisfies typeof ja;

@@ -16,7 +16,7 @@ async function submit() {
 	try {
 		await unwrap(useApi().PUT('/me/password', { body }));
 		toast(t('common.messages.saved'));
-		await navigateTo('/settings');
+		await navigateTo('/settings/account');
 	} catch (err) {
 		onError(err);
 	} finally {
@@ -27,7 +27,7 @@ async function submit() {
 
 <template>
 <div class="space-y-4">
-	<PageHeader back="/settings" :title="t('pages.password.title')" :eyebrow="t('common.eyebrow.password')"/>
+	<PageHeader back="/settings/account" :title="t('pages.password.title')" :eyebrow="t('common.eyebrow.password')"/>
 	<form v-reveal class="panel space-y-4 p-6" novalidate @submit.prevent="submit">
 		<FormField v-slot="{ field }" :label="t('pages.password.current')" :error="errors.current">
 			<input v-bind="field" v-model="form.current" type="password" class="input" autocomplete="current-password">

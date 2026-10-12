@@ -55,6 +55,10 @@ namespace AuthApi {
 namespace MeApi {
   @get op get(): User | Unauthorized;
 
+  @doc("表示名・ログイン名の変更")
+  @patch(#{ implicitOptionality: false })
+  op update(@body body: ProfileUpdate): User | CommonErrors | Conflict;
+
   @put
   @route("/password")
   op changePassword(@body body: PasswordChange): NoContentResponse | CommonErrors;
@@ -65,6 +69,15 @@ namespace MeApi {
 namespace AdminApi {
   @get op list(): User[] | CommonErrors;
   @post op create(@body body: CreateUserRequest): User | CommonErrors | Conflict;
+  @get
+  @route("/{id}")
+  op get(@path id: string): User | CommonErrors;
+
+  @doc("自身の管理者権限は外せない")
+  @patch(#{ implicitOptionality: false })
+  @route("/{id}")
+  op update(@path id: string, @body body: UserUpdate): User | CommonErrors | Conflict;
+
   @delete op delete(@path id: string): NoContentResponse | CommonErrors;
 }
 

@@ -61,6 +61,11 @@ type UserRepository interface {
 	List(ctx context.Context) ([]user.User, error)
 	Count(ctx context.Context) (int, error)
 	UpdatePassword(ctx context.Context, id user.ID, hash string) error
+	// 表示名と権限
+	Update(ctx context.Context, u user.User) error
+	UpdateLoginName(ctx context.Context, id user.ID, login string) error
+	// ローカルのログイン名, OIDCのみの利用者は含まない
+	LoginNames(ctx context.Context) (map[user.ID]string, error)
 	Delete(ctx context.Context, id user.ID) error
 }
 
@@ -77,6 +82,7 @@ type SessionRepository interface {
 	Get(ctx context.Context, id string) (Session, error)
 	Delete(ctx context.Context, id string) error
 	DeleteExpired(ctx context.Context, now time.Time) error
+	DeleteForUser(ctx context.Context, id user.ID) error
 }
 
 type DatasetRepository interface {

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -8,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -108,11 +110,158 @@ func (s *Accounts) CreateUserUnchecked(ctx context.Context, in SignUpInput, role
 	return u, err
 }
 
-func (s *Accounts) ListUsers(ctx context.Context, actor user.User) ([]user.User, error) {
+// 利用者とローカルのログイン名
+type Account struct {
+	user.User
+	// OIDCのみの利用者は空
+	LoginName string
+}
+
+// nilは変更なし
+type ProfileUpdate struct {
+	DisplayName *string
+	LoginName   *string
+}
+
+// 管理者による変更, nilは変更なし
+type UserUpdate struct {
+	ProfileUpdate
+	Role *user.Role
+	// 現在のパスワードなしで再設定
+	Password *string
+}
+
+func (s *Accounts) ListUsers(ctx context.Context, actor user.User) ([]Account, error) {
 	if !actor.IsAdmin() {
 		return nil, ErrForbidden
 	}
-	return s.d.Store.Users().List(ctx)
+	users, err := s.d.Store.Users().List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	logins, err := s.d.Store.Users().LoginNames(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Account, 0, len(users))
+	for _, u := range users {
+		out = append(out, Account{User: u, LoginName: logins[u.ID]})
+	}
+	return out, nil
+}
+
+func (s *Accounts) Account(ctx context.Context, u user.User) (Account, error) {
+	return s.account(ctx, s.d.Store, u.ID)
+}
+
+func (s *Accounts) GetUser(ctx context.Context, actor user.User, id user.ID) (Account, error) {
+	if !actor.IsAdmin() {
+		return Account{}, ErrForbidden
+	}
+	return s.account(ctx, s.d.Store, id)
+}
+
+// 本人による表示名・ログイン名の変更
+func (s *Accounts) UpdateProfile(ctx context.Context, u user.User, in ProfileUpdate) (Account, error) {
+	return s.update(ctx, u.ID, UserUpdate{ProfileUpdate: in})
+}
+
+// 自身の管理者権限は外せない, パスワード再設定時は対象のセッションを破棄
+func (s *Accounts) UpdateUser(ctx context.Context, actor user.User, id user.ID, in UserUpdate) (Account, error) {
+	if !actor.IsAdmin() {
+		return Account{}, ErrForbidden
+	}
+	if in.Role != nil && actor.ID == id && *in.Role != user.RoleAdmin {
+		return Account{}, ErrForbidden
+	}
+	acc, err := s.update(ctx, id, in)
+	if err != nil {
+		return Account{}, err
+	}
+	if in.Password != nil && actor.ID != id {
+		if err := s.d.Store.Sessions().DeleteForUser(ctx, id); err != nil {
+			return Account{}, err
+		}
+	}
+	return acc, nil
+}
+
+func (s *Accounts) account(ctx context.Context, r port.Repositories, id user.ID) (Account, error) {
+	u, err := r.Users().Get(ctx, id)
+	if err != nil {
+		return Account{}, err
+	}
+	acc := Account{User: u}
+	cred, err := r.Users().LocalCredential(ctx, id)
+	switch {
+	case err == nil:
+		acc.LoginName = cred.Subject
+	case !errors.Is(err, ErrNotFound):
+		return Account{}, err
+	}
+	return acc, nil
+}
+
+func (s *Accounts) update(ctx context.Context, id user.ID, in UserUpdate) (Account, error) {
+	var out Account
+	err := s.d.Store.InTx(ctx, func(r port.Repositories) error {
+		acc, err := s.account(ctx, r, id)
+		if err != nil {
+			return err
+		}
+		if in.LoginName != nil {
+			login := strings.ToLower(strings.TrimSpace(*in.LoginName))
+			if err := s.changeLogin(ctx, r, acc, login); err != nil {
+				return err
+			}
+			acc.LoginName = login
+		}
+		if in.Password != nil {
+			if acc.LoginName == "" {
+				return invalid(errors.New("user has no local login"))
+			}
+			if len(*in.Password) < minPasswordLength {
+				return invalid(errors.New("password too short"))
+			}
+			hash, err := s.d.Hasher.Hash(*in.Password)
+			if err != nil {
+				return err
+			}
+			if err := r.Users().UpdatePassword(ctx, id, hash); err != nil {
+				return err
+			}
+		}
+		if in.DisplayName != nil {
+			acc.DisplayName = trimDisplayName(*in.DisplayName, cmp.Or(acc.LoginName, acc.DisplayName))
+		}
+		if in.Role != nil {
+			if *in.Role != user.RoleAdmin && *in.Role != user.RoleMember {
+				return invalid(fmt.Errorf("unknown role %q", *in.Role))
+			}
+			acc.Role = *in.Role
+		}
+		out = acc
+		return r.Users().Update(ctx, acc.User)
+	})
+	return out, err
+}
+
+func (s *Accounts) changeLogin(ctx context.Context, r port.Repositories, acc Account, login string) error {
+	if acc.LoginName == "" {
+		return invalid(errors.New("user has no local login"))
+	}
+	if login == acc.LoginName {
+		return nil
+	}
+	if !loginNamePattern.MatchString(login) {
+		return invalid(errors.New("login name must be 3-32 characters of a-z, 0-9, _ . -"))
+	}
+	if _, _, err := r.Users().FindByCredential(ctx, ProviderLocal, login); err == nil {
+		return ErrConflict
+	} else if !errors.Is(err, ErrNotFound) {
+		return err
+	}
+	return r.Users().UpdateLoginName(ctx, acc.ID, login)
 }
 
 func (s *Accounts) DeleteUser(ctx context.Context, actor user.User, id user.ID) error {

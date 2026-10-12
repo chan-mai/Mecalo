@@ -8,6 +8,10 @@ enum Role {
 model User {
   id: string;
   displayName: string;
+
+  @doc("ローカルのログイン名, OIDCのみの利用者は省略")
+  loginName?: string;
+
   role: Role;
   createdAt: utcDateTime;
 }
@@ -49,6 +53,25 @@ model PasswordChange {
 
   @minLength(8)
   next: string;
+}
+
+@doc("省略した項目は変更なし")
+model ProfileUpdate {
+  @maxLength(64)
+  displayName?: string;
+
+  @pattern("^[a-zA-Z0-9_.-]{3,32}$")
+  loginName?: string;
+}
+
+@doc("省略した項目は変更なし")
+model UserUpdate {
+  ...ProfileUpdate;
+  role?: Role;
+
+  @doc("現在のパスワードなしで再設定, 対象のセッションは破棄")
+  @minLength(8)
+  password?: string;
 }
 
 model CreateUserRequest {

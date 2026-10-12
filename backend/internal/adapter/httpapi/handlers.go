@@ -90,7 +90,23 @@ func (s *server) AuthApiLogout(ctx context.Context, _ gen.AuthApiLogoutRequestOb
 }
 
 func (s *server) MeApiGet(ctx context.Context, _ gen.MeApiGetRequestObject) (gen.MeApiGetResponseObject, error) {
-	return gen.MeApiGet200JSONResponse(toUser(currentUser(ctx))), nil
+	acc, err := s.app.Accounts.Account(ctx, currentUser(ctx))
+	if err != nil {
+		return nil, err
+	}
+	return gen.MeApiGet200JSONResponse(toAccount(acc)), nil
+}
+
+func profileUpdate(displayName, loginName *string) app.ProfileUpdate {
+	return app.ProfileUpdate{DisplayName: displayName, LoginName: loginName}
+}
+
+func (s *server) MeApiUpdate(ctx context.Context, req gen.MeApiUpdateRequestObject) (gen.MeApiUpdateResponseObject, error) {
+	acc, err := s.app.Accounts.UpdateProfile(ctx, currentUser(ctx), profileUpdate(req.Body.DisplayName, req.Body.LoginName))
+	if err != nil {
+		return nil, err
+	}
+	return gen.MeApiUpdate200JSONResponse(toAccount(acc)), nil
 }
 
 func (s *server) MeApiChangePassword(ctx context.Context, req gen.MeApiChangePasswordRequestObject) (gen.MeApiChangePasswordResponseObject, error) {
@@ -107,9 +123,31 @@ func (s *server) AdminApiList(ctx context.Context, _ gen.AdminApiListRequestObje
 	}
 	out := gen.AdminApiList200JSONResponse{}
 	for _, u := range users {
-		out = append(out, toUser(u))
+		out = append(out, toAccount(u))
 	}
 	return out, nil
+}
+
+func (s *server) AdminApiGet(ctx context.Context, req gen.AdminApiGetRequestObject) (gen.AdminApiGetResponseObject, error) {
+	acc, err := s.app.Accounts.GetUser(ctx, currentUser(ctx), user.ID(req.Id))
+	if err != nil {
+		return nil, err
+	}
+	return gen.AdminApiGet200JSONResponse(toAccount(acc)), nil
+}
+
+func (s *server) AdminApiUpdate(ctx context.Context, req gen.AdminApiUpdateRequestObject) (gen.AdminApiUpdateResponseObject, error) {
+	b := req.Body
+	in := app.UserUpdate{ProfileUpdate: profileUpdate(b.DisplayName, b.LoginName), Password: b.Password}
+	if b.Role != nil {
+		role := user.Role(*b.Role)
+		in.Role = &role
+	}
+	acc, err := s.app.Accounts.UpdateUser(ctx, currentUser(ctx), user.ID(req.Id), in)
+	if err != nil {
+		return nil, err
+	}
+	return gen.AdminApiUpdate200JSONResponse(toAccount(acc)), nil
 }
 
 func (s *server) AdminApiCreate(ctx context.Context, req gen.AdminApiCreateRequestObject) (gen.AdminApiCreateResponseObject, error) {

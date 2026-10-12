@@ -399,6 +399,101 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateUserRequest'
   /admin/users/{id}:
+    get:
+      operationId: AdminApi_get
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - admin
+    patch:
+      operationId: AdminApi_update
+      description: 自身の管理者権限は外せない
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
     delete:
       operationId: AdminApi_delete
       parameters:
@@ -1548,6 +1643,55 @@ paths:
                 $ref: '#/components/schemas/Problem'
       tags:
         - auth
+    patch:
+      operationId: MeApi_update
+      description: 表示名・ログイン名の変更
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdate'
   /me/password:
     put:
       operationId: MeApi_changePassword
@@ -3425,6 +3569,16 @@ components:
         menstruating:
           type: boolean
           description: 鉄の基準値選択用
+    ProfileUpdate:
+      type: object
+      properties:
+        displayName:
+          type: string
+          maxLength: 64
+        loginName:
+          type: string
+          pattern: ^[a-zA-Z0-9_.-]{3,32}$
+      description: 省略した項目は変更なし
     Quantity:
       type: object
       required:
@@ -3787,11 +3941,30 @@ components:
           type: string
         displayName:
           type: string
+        loginName:
+          type: string
+          description: ローカルのログイン名, OIDCのみの利用者は省略
         role:
           $ref: '#/components/schemas/Role'
         createdAt:
           type: string
           format: date-time
+    UserUpdate:
+      type: object
+      properties:
+        displayName:
+          type: string
+          maxLength: 64
+        loginName:
+          type: string
+          pattern: ^[a-zA-Z0-9_.-]{3,32}$
+        role:
+          $ref: '#/components/schemas/Role'
+        password:
+          type: string
+          minLength: 8
+          description: 現在のパスワードなしで再設定, 対象のセッションは破棄
+      description: 省略した項目は変更なし
     Weight:
       type: object
       required:

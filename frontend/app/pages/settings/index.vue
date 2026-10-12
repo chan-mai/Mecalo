@@ -63,7 +63,7 @@ watch(settings, (s) => {
 const links = computed(() => [
 	{ to: '/history', label: 'pages.settings.links.weight' },
 	{ to: '/settings/data', label: 'pages.settings.links.data' },
-	{ to: '/settings/password', label: 'pages.settings.links.password' },
+	{ to: '/settings/account', label: 'pages.settings.links.account' },
 	{ to: '/about', label: 'pages.settings.links.about' },
 ]);
 
