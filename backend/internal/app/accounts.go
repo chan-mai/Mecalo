@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -51,8 +52,11 @@ func (s *Accounts) RegistrationOpen() bool {
 	return s.opt.RegistrationOpen
 }
 
-// 利用者0件時のみ管理者を作成
-func (s *Accounts) Setup(ctx context.Context, in SignUpInput) (IssuedSession, error) {
+// 利用者0件時のみ, トークン一致時に管理者を作成
+func (s *Accounts) Setup(ctx context.Context, token string, in SignUpInput) (IssuedSession, error) {
+	if s.d.SetupToken != "" && subtle.ConstantTimeCompare([]byte(token), []byte(s.d.SetupToken)) != 1 {
+		return IssuedSession{}, ErrForbidden
+	}
 	var u user.User
 	err := s.d.Store.InTx(ctx, func(r port.Repositories) error {
 		n, err := r.Users().Count(ctx)
@@ -60,7 +64,7 @@ func (s *Accounts) Setup(ctx context.Context, in SignUpInput) (IssuedSession, er
 			return err
 		}
 		if n > 0 {
-			return ErrForbidden
+			return ErrConflict
 		}
 		u, err = s.createLocal(ctx, r, in, user.RoleAdmin)
 		return err

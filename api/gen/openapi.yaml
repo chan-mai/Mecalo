@@ -368,7 +368,7 @@ paths:
   /auth/setup:
     post:
       operationId: AuthApi_setup
-      description: 利用者0件時のみ管理者を作成しログイン
+      description: 利用者0件時のみ, セットアップトークン一致時に管理者を作成しログイン
       parameters: []
       responses:
         '200':
@@ -414,7 +414,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SignUpRequest'
+              $ref: '#/components/schemas/SetupRequest'
       security:
         - {}
   /auth/signup:
@@ -3380,6 +3380,24 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TargetOverride'
+    SetupRequest:
+      type: object
+      required:
+        - loginName
+        - password
+        - setupToken
+      properties:
+        loginName:
+          type: string
+          pattern: ^[a-zA-Z0-9_.-]{3,32}$
+        password:
+          type: string
+          minLength: 8
+        displayName:
+          type: string
+        setupToken:
+          type: string
+          description: MECALO_SETUP_TOKENの値, 未指定時は起動時のログに出力
     Sex:
       type: string
       enum:

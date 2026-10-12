@@ -45,7 +45,8 @@ func (s *server) AuthApiSetup(ctx context.Context, req gen.AuthApiSetupRequestOb
 	if !s.opt.LocalAuth {
 		return nil, app.ErrDisabled
 	}
-	sess, err := s.app.Accounts.Setup(ctx, signUpInput(*req.Body))
+	b := req.Body
+	sess, err := s.app.Accounts.Setup(ctx, b.SetupToken, signUpInput(gen.SignUpRequest{LoginName: b.LoginName, DisplayName: b.DisplayName, Password: b.Password}))
 	if err != nil {
 		return nil, err
 	}

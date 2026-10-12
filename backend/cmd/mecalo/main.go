@@ -3,6 +3,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -101,8 +103,11 @@ func run(args []string) error {
 }
 
 type runtime struct {
-	app   *app.App
-	store *sqlstore.Store
+	app        *app.App
+	store      *sqlstore.Store
+	setupToken string
+	// 起動時に生成したトークン
+	generatedToken bool
 }
 
 func open(ctx context.Context, cfg config) (*runtime, error) {
@@ -125,12 +130,24 @@ func open(ctx context.Context, cfg config) (*runtime, error) {
 		Hasher:    password.Default(),
 	}
 	deps.OnSync = logSync
+	generated := cfg.SetupToken == ""
+	if generated {
+		deps.SetupToken = randomToken()
+	} else {
+		deps.SetupToken = cfg.SetupToken
+	}
 	if err := configureSources(cfg, &deps); err != nil {
 		store.Close()
 		return nil, err
 	}
 	a := app.New(deps, app.Options{RegistrationOpen: cfg.Registration(), OIDCAutoProvision: cfg.OIDCAutoCreate})
-	return &runtime{app: a, store: store}, nil
+	return &runtime{app: a, store: store, setupToken: deps.SetupToken, generatedToken: generated}, nil
+}
+
+func randomToken() string {
+	b := make([]byte, 24)
+	_, _ = rand.Read(b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }
 
 func openStore(ctx context.Context, url string, opts ...sqlstore.Option) (*sqlstore.Store, error) {
@@ -180,6 +197,9 @@ func serve(ctx context.Context, cfg config) error {
 		WriteTimeout:      120 * time.Second,
 		MaxHeaderBytes:    1 << 20,
 	}
+	if err := logSetup(ctx, rt); err != nil {
+		return err
+	}
 	go purgeSessions(ctx, rt.app)
 	if cfg.SyncInterval > 0 {
 		go syncSources(ctx, rt.app, cfg.SyncInterval)
@@ -198,6 +218,20 @@ func serve(ctx context.Context, cfg config) error {
 	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	return srv.Shutdown(shutdown)
+}
+
+// 利用者0件時のみ初回セットアップの案内
+func logSetup(ctx context.Context, rt *runtime) error {
+	needs, err := rt.app.Accounts.NeedsSetup(ctx)
+	if err != nil || !needs {
+		return err
+	}
+	if rt.generatedToken {
+		slog.Warn("no users yet: create the first administrator at /setup with this setup token, or set MECALO_SETUP_TOKEN", "setup_token", rt.setupToken)
+		return nil
+	}
+	slog.Warn("no users yet: create the first administrator at /setup with MECALO_SETUP_TOKEN")
+	return nil
 }
 
 func purgeSessions(ctx context.Context, a *app.App) {

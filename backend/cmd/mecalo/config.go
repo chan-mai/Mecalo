@@ -31,6 +31,8 @@ type config struct {
 	TabecalKey      string         `env:"MECALO_TABECAL_KEY"`
 	SyncInterval    time.Duration  `env:"MECALO_SYNC_INTERVAL" envDefault:"168h"`
 	FetchUserAgent  string         `env:"MECALO_FETCH_USER_AGENT"`
+	// 空は起動時に生成
+	SetupToken string `env:"MECALO_SETUP_TOKEN"`
 }
 
 func (c config) LocalAuth() bool   { return slices.Contains(c.AuthProviders, "local") }

@@ -43,6 +43,8 @@ type Deps struct {
 	Finders []port.FoodFinder
 	// 定期同期する商品一覧
 	Catalogs []port.Catalog
+	// 初回の管理者作成に必要なトークン, 空は不要
+	SetupToken string
 	// 同期の経過の通知先, nilは通知なし
 	OnSync func(SyncEvent)
 	Hasher port.PasswordHasher

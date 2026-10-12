@@ -1,25 +1,48 @@
 <script setup lang="ts">
-import { unwrap, useApi } from '~/composables/api/client';
-import { signUpSchema } from '~/schemas/auth';
+import { toast } from 'vue-sonner';
+import { ApiError, unwrap, useApi } from '~/composables/api/client';
+import { setupSchema, signUpSchema } from '~/schemas/auth';
 
 const props = defineProps<{ title: string; hint?: string; path: '/auth/setup' | '/auth/signup' }>();
 const { t } = useI18n();
 const { refresh } = useAuth();
 const onError = useErrorHandler();
-const { errors, validate } = useValidation(signUpSchema);
+const signUp = useValidation(signUpSchema);
+const setup = useValidation(setupSchema);
+const isSetup = computed(() => props.path === '/auth/setup');
+const errors = computed(() => (isSetup.value ? setup.errors.value : signUp.errors.value));
 
-const form = reactive({ loginName: '', displayName: '', password: '' });
+const form = reactive({ loginName: '', displayName: '', password: '', setupToken: '' });
 const busy = ref(false);
 
+// 入力不備はfalse
+async function post(): Promise<boolean> {
+	if (isSetup.value) {
+		const body = setup.validate(form);
+		if (body) await unwrap(useApi().POST('/auth/setup', { body }));
+		return body !== undefined;
+	}
+	const body = signUp.validate(form);
+	if (body) await unwrap(useApi().POST('/auth/signup', { body }));
+	return body !== undefined;
+}
+
 async function submit() {
-	const body = validate(form);
-	if (!body) return;
 	busy.value = true;
 	try {
-		await unwrap(useApi().POST(props.path, { body }));
+		if (!await post()) return;
 		await refresh();
 		await navigateTo('/settings');
 	} catch (err) {
+		if (isSetup.value && err instanceof ApiError && err.status === 403) {
+			setup.errors.value = { setupToken: 'errors.auth.setupToken' };
+			return;
+		}
+		if (isSetup.value && err instanceof ApiError && err.status === 409) {
+			toast.error(t('errors.auth.setupDone'));
+			await navigateTo('/login');
+			return;
+		}
 		onError(err);
 	} finally {
 		busy.value = false;
@@ -33,6 +56,9 @@ async function submit() {
 		<SectionHeading icon="lucide:user-plus" :eyebrow="t('common.eyebrow.account')" :title="title"/>
 		<p v-if="hint" class="mt-2 text-sm text-muted">{{ hint }}</p>
 	</div>
+	<FormField v-if="isSetup" v-slot="{ field }" :label="t('pages.auth.setupToken')" :hint="t('pages.auth.setupTokenHint')" :error="errors.setupToken">
+		<input v-bind="field" v-model="form.setupToken" type="password" class="input" autocomplete="off" required>
+	</FormField>
 	<FormField v-slot="{ field }" :label="t('terms.loginName')" :error="errors.loginName">
 		<input v-bind="field" v-model="form.loginName" class="input" autocomplete="username" autocapitalize="none" required>
 	</FormField>

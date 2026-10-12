@@ -37,6 +37,13 @@ model SignUpRequest {
   displayName?: string;
 }
 
+model SetupRequest {
+  ...SignUpRequest;
+
+  @doc("MECALO_SETUP_TOKENの値, 未指定時は起動時のログに出力")
+  setupToken: string;
+}
+
 model PasswordChange {
   current: string;
 

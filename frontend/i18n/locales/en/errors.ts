@@ -7,6 +7,8 @@ export default {
 		failed: 'Incorrect login name or password',
 		oidc: 'External login failed',
 		notRegistered: 'This account is not registered',
+		setupToken: 'Authentication failed. The setup token does not match',
+		setupDone: 'Initial setup is already complete. Log in instead',
 	},
 	validation: {
 		required: 'Required',

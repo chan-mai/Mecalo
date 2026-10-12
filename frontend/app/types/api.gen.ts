@@ -160,7 +160,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 利用者0件時のみ管理者を作成しログイン */
+        /** @description 利用者0件時のみ, セットアップトークン一致時に管理者を作成しログイン */
         post: operations["AuthApi_setup"];
         delete?: never;
         options?: never;
@@ -1217,6 +1217,13 @@ export interface components {
             profile: components["schemas"]["Profile"];
             overrides?: components["schemas"]["TargetOverride"][];
         };
+        SetupRequest: {
+            loginName: string;
+            password: string;
+            displayName?: string;
+            /** @description MECALO_SETUP_TOKENの値, 未指定時は起動時のログに出力 */
+            setupToken: string;
+        };
         /** @enum {string} */
         Sex: "male" | "female";
         SignUpRequest: {
@@ -1762,7 +1769,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SignUpRequest"];
+                "application/json": components["schemas"]["SetupRequest"];
             };
         };
         responses: {

@@ -12,11 +12,11 @@ namespace AuthApi {
   @useAuth(NoAuth)
   op config(): AuthConfig;
 
-  @doc("利用者0件時のみ管理者を作成しログイン")
+  @doc("利用者0件時のみ, セットアップトークン一致時に管理者を作成しログイン")
   @post
   @route("/setup")
   @useAuth(NoAuth)
-  op setup(@body body: SignUpRequest): User | CommonErrors | Conflict;
+  op setup(@body body: SetupRequest): User | CommonErrors | Conflict;
 
   @post
   @route("/signup")
