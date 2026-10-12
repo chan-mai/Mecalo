@@ -157,6 +157,14 @@ internal/domain/*    純粋ロジック
 - local: ログイン名とパスワード(argon2id)
 - oidc: Authorization Code + PKCE(S256)
 - セッションはHttpOnly・SameSite=LaxのCookie。状態変更リクエストには`X-Mecalo-Request`ヘッダ必須
+- 最初の管理者の作成(`/auth/setup`)はセットアップトークンの一致が必要
+
+## インスタンスの設定
+
+- 項目の定義(環境変数名, 種類, 既定値)は`cmd/mecalo/config.go`の`settingDefs`, 値の解決と保存は`app.Instance`
+- 値はWebUIで設定した値(`instance_settings`テーブル) > 環境変数 > 既定値の順。環境変数・既定値と同じ値を設定した場合はWebUIでの設定を解除
+- 変更時は値を検証し反映の準備ができた場合のみ保存し、再起動せずに反映(`app.App.Reconfigure`, 時計, 同期間隔, ログイン方法)
+- DBの接続先や待受アドレス等、DBを開く前に必要な項目は環境変数のみ
 
 ## 外部サービス
 
