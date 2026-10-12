@@ -5,10 +5,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/chan-mai/mecalo/backend/internal/adapter/official"
-	"github.com/chan-mai/mecalo/backend/internal/adapter/openfoodfacts"
-	"github.com/chan-mai/mecalo/backend/internal/adapter/tabecal"
-	"github.com/chan-mai/mecalo/backend/internal/adapter/webfetch"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/official"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/openfoodfacts"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/tabecal"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/webfetch"
 	"github.com/chan-mai/mecalo/backend/internal/app"
 )
 

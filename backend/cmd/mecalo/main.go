@@ -20,10 +20,10 @@ import (
 
 	"github.com/chan-mai/mecalo/backend/data"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/dri"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/mext"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/openfoodfacts"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/httpapi"
-	"github.com/chan-mai/mecalo/backend/internal/adapter/mext"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/oidc"
-	"github.com/chan-mai/mecalo/backend/internal/adapter/openfoodfacts"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/password"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/reading"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/sqlstore"
