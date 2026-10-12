@@ -57,6 +57,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/sources/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 同期中でない全取得元の商品一覧の同期を順に開始 */
+        post: operations["AdminSourcesApi_syncAll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/sources/{id}/sync": {
         parameters: {
             query?: never;
@@ -1306,8 +1323,18 @@ export interface components {
              * @description 直近の同期で確認した商品数
              */
             items: number;
-            /** @description 同期中 */
+            /** @description 同期中または待機中 */
             running: boolean;
+            /**
+             * Format: date-time
+             * @description 同期の開始時刻, 待機中と同期中以外は省略
+             */
+            runningSince?: string;
+            /**
+             * Format: int32
+             * @description 同期中に確認した商品数
+             */
+            runningItems?: number;
         };
         /** @enum {string} */
         SourceKind: "lookup" | "finder" | "catalog";
@@ -1638,6 +1665,69 @@ export interface operations {
             };
             /** @description The server cannot find the requested resource. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    AdminSourcesApi_syncAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has been accepted for processing, but processing has not yet completed. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request conflicts with the current state of the server. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -270,6 +270,13 @@ func toSourceInfo(s app.SourceInfo) gen.Source {
 		t := s.Status.SyncedAt
 		out.SyncedAt = &t
 	}
+	if s.Running {
+		n := int32(s.Progress.Items)
+		out.RunningItems = &n
+		if t := s.Progress.StartedAt; !t.IsZero() {
+			out.RunningSince = &t
+		}
+	}
 	return out
 }
 

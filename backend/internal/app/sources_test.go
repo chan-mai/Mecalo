@@ -314,3 +314,49 @@ func TestSimilarSearch(t *testing.T) {
 		}
 	})
 }
+
+// 同期の開始を止める一覧
+type gatedCatalog struct {
+	fakeCatalog
+	gate chan struct{}
+}
+
+func (c *gatedCatalog) Sync(ctx context.Context, prev port.CatalogState, sink port.CatalogSink) (port.CatalogState, error) {
+	<-c.gate
+	return c.fakeCatalog.Sync(ctx, prev, sink)
+}
+
+func TestStartSyncAll(t *testing.T) {
+	eachStore(t, func(t *testing.T, s port.Store) {
+		cat := &gatedCatalog{fakeCatalog: fakeCatalog{foods: []app.SystemFood{chainFood("1", "テストバーガー", "500")}}, gate: make(chan struct{})}
+		done := make(chan app.SyncEvent, 1)
+		e := newEnvWith(t, s, func(d *app.Deps) {
+			d.Catalogs = []port.Catalog{cat}
+			d.OnSync = func(ev app.SyncEvent) {
+				if ev.Phase == app.SyncFinished || ev.Phase == app.SyncFailed {
+					done <- ev
+				}
+			}
+		})
+		if err := e.app.Sources.StartSyncAll(e.ctx, e.bob); !errors.Is(err, app.ErrForbidden) {
+			t.Errorf("member: %v", err)
+		}
+		if err := e.app.Sources.StartSyncAll(e.ctx, e.alice); err != nil {
+			t.Fatal(err)
+		}
+		if err := e.app.Sources.StartSyncAll(e.ctx, e.alice); !errors.Is(err, app.ErrConflict) {
+			t.Errorf("while running: %v", err)
+		}
+		list, err := e.app.Sources.List(e.ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(list) != 1 || !list[0].Running {
+			t.Errorf("running = %+v", list)
+		}
+		close(cat.gate)
+		if ev := <-done; ev.Phase != app.SyncFinished || ev.Result.Created != 1 {
+			t.Errorf("event = %+v", ev)
+		}
+	})
+}

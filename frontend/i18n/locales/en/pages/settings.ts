@@ -130,12 +130,16 @@ export default {
 		},
 	},
 	adminSources: {
-		title: 'External data sources',
-		note: 'Sources are enabled with the MECALO_SOURCES environment variable. Check each site\'s terms before syncing official sites, and keep the data within the users of this instance',
+		title: 'External data integration',
+		note: 'Check each site\'s terms before syncing data from official sites, and keep the data within the users of this instance',
 		empty: 'No sources are enabled',
 		sync: 'Sync',
+		syncAll: 'Sync all',
 		started: 'Started syncing {name}',
+		startedAll: 'Started syncing. Sources are synced one at a time',
 		running: 'Syncing',
+		queued: 'Queued',
+		progress: 'Syncing: started {date}, {items} items checked',
 		syncedAt: 'Synced {date}, {items} items',
 		kind: {
 			lookup: 'Barcode lookup',

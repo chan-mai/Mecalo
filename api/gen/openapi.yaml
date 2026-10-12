@@ -226,6 +226,46 @@ paths:
                 $ref: '#/components/schemas/Problem'
       tags:
         - admin
+  /admin/sources/sync:
+    post:
+      operationId: AdminSourcesApi_syncAll
+      description: 同期中でない全取得元の商品一覧の同期を順に開始
+      parameters: []
+      responses:
+        '202':
+          description: The request has been accepted for processing, but processing has not yet completed.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - admin
   /admin/sources/{id}/sync:
     post:
       operationId: AdminSourcesApi_sync
@@ -3678,7 +3718,15 @@ components:
           description: 直近の同期で確認した商品数
         running:
           type: boolean
-          description: 同期中
+          description: 同期中または待機中
+        runningSince:
+          type: string
+          format: date-time
+          description: 同期の開始時刻, 待機中と同期中以外は省略
+        runningItems:
+          type: integer
+          format: int32
+          description: 同期中に確認した商品数
     SourceKind:
       type: string
       enum:

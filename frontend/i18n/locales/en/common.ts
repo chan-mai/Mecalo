@@ -74,5 +74,6 @@ export default {
 		long: 'ddd, MMM D',
 		short: 'M/D',
 		full: 'MMM D, YYYY',
+		dateTime: 'MMM D, YYYY HH:mm',
 	},
 } satisfies typeof ja;

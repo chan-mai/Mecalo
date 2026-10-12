@@ -75,6 +75,11 @@ namespace AdminSourcesApi {
   @get
   op list(): Source[] | CommonErrors;
 
+  @doc("同期中でない全取得元の商品一覧の同期を順に開始")
+  @post
+  @route("/sync")
+  op syncAll(): AcceptedResponse | CommonErrors | Conflict;
+
   @doc("商品一覧の同期を開始")
   @post
   @route("/{id}/sync")

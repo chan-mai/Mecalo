@@ -142,6 +142,13 @@ func (s *server) AdminSourcesApiList(ctx context.Context, _ gen.AdminSourcesApiL
 	return out, nil
 }
 
+func (s *server) AdminSourcesApiSyncAll(ctx context.Context, _ gen.AdminSourcesApiSyncAllRequestObject) (gen.AdminSourcesApiSyncAllResponseObject, error) {
+	if err := s.app.Sources.StartSyncAll(ctx, currentUser(ctx)); err != nil {
+		return nil, err
+	}
+	return gen.AdminSourcesApiSyncAll202Response{}, nil
+}
+
 func (s *server) AdminSourcesApiSync(ctx context.Context, req gen.AdminSourcesApiSyncRequestObject) (gen.AdminSourcesApiSyncResponseObject, error) {
 	if err := s.app.Sources.StartSync(ctx, currentUser(ctx), food.DatasetID(req.Id)); err != nil {
 		return nil, err
