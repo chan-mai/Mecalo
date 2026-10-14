@@ -60,7 +60,7 @@ Mecalo = meal(memory) + calorie
 | `MECALO_AUTH_PROVIDERS` | `local` | `local`, `oidc` をカンマ区切りで指定 |
 | `MECALO_REGISTRATION` | `closed` | アカウントの作成可否 `open`で誰でもアカウント作成可能 |
 | `MECALO_SECURE_COOKIE` | `true` | HTTPS環境用設定 |
-| `MECALO_CORS_ORIGINS` | なし | 許可オリジン |
+| `MECALO_CORS_ORIGINS` | なし | 許可オリジン(`/api`, `/mcp`) |
 | `MECALO_SETUP_TOKEN` | なし(起動時に生成) | 初回セットアップで最初の管理者を作成する際のトークン |
 | `MECALO_OIDC_ISSUER` | なし | OIDCプロバイダ Issuer URI |
 | `MECALO_OIDC_CLIENT_ID` | なし | Client ID(public client) |
@@ -73,6 +73,8 @@ Mecalo = meal(memory) + calorie
 | `MECALO_TABECAL_KEY` | なし | タベカルのAPIキー, 空はキー不要の範囲に限り利用可能 |
 | `MECALO_SYNC_INTERVAL` | `168h` | 一覧同期の間隔, `0`で自動同期なし |
 | `MECALO_FETCH_USER_AGENT` | `Mecalo-Agent/v<バージョン> (https://github.com/chan-mai/Mecalo)` | 外部サイト・APIへ送るUser-Agent, robots.txtは`/`より前の製品名で照合 |
+| `MECALO_MCP_ENABLED` | `false` | MCPサーバ(`/mcp`)を有効にするか |
+| `MECALO_PUBLIC_URL` | なし | 利用者がアクセスするURL(パスなし)。MCPのOAuthに必要 |
 
 `MECALO_SOURCES`に指定できる取得元
 
@@ -89,6 +91,12 @@ Mecalo = meal(memory) + calorie
 
 > [!IMPORTANT]
 > 各サイトの利用規約は私的使用の範囲を超える複製を禁止しているため、有効にする前に利用規約を確認し、取得したデータはインスタンスの利用者の範囲で利用してください
+
+
+### MCPサーバ
+
+`MECALO_MCP_ENABLED=true`(または管理画面のインスタンスの設定)で、MCPに対応したクライアントから記録の参照と記録が可能です。接続先は`https://<host>/mcp`(Streamable HTTP)を指定してください。
+
 
 
 ### 管理コマンド

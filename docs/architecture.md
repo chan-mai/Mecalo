@@ -45,6 +45,8 @@ internal/domain/*    純粋ロジック
 | `adapter/foodsource/tabecal` | 外部検索(タベカル) |
 | `adapter/foodsource/official` | 公式サイトの商品一覧の同期。取得元は`registry.go`へ登録し、商品ページの巡回は`detail.go`の共通処理を利用 |
 | `adapter/foodsource/extract` | 栄養成分表示・HTML・PDFの表の解析の共通部品 |
+| `adapter/tools` | アシスタントから呼ぶ操作(食品検索, 記録の参照・追加等)の定義。MCPとWebUIのアシスタントで共有 |
+| `adapter/mcpserver` | `/mcp`のMCPサーバ(Streamable HTTP, ステートレス) |
 | `adapter/foodsource/webfetch` | 外部サイト取得の共通処理(robots.txt, 間隔制御, 条件付きGET) |
 
 ## フロントエンドの構成
@@ -158,6 +160,13 @@ internal/domain/*    純粋ロジック
 - oidc: Authorization Code + PKCE(S256)
 - セッションはHttpOnly・SameSite=LaxのCookie。状態変更リクエストには`X-Mecalo-Request`ヘッダ必須
 - 最初の管理者の作成(`/auth/setup`)はセットアップトークンの一致が必要
+
+## MCPサーバ
+
+- `MECALO_MCP_ENABLED`で有効化, 無効時は`/mcp`もトークン発行も404
+- スコープはread / write。readのトークンには書き込みの操作を一覧に含めず呼び出し含め拒否
+- 操作は`adapter/tools`に定義し、app層のユースケースを利用者IDで呼ぶ(HTTP APIと同じ所有者検査)
+- Nuxtの`server/routes/mcp.ts`がバックエンドへ転送
 
 ## インスタンスの設定
 
