@@ -31,6 +31,105 @@ model AuthConfig {
   oidcName?: string;
 }
 
+@doc("APIトークンで許可する操作, writeは読み取りを含む")
+enum TokenScope {
+  read,
+  write,
+}
+
+model ApiToken {
+  id: string;
+  name: string;
+  scope: TokenScope;
+  createdAt: utcDateTime;
+}
+
+model TokenList {
+  @doc("MECALO_MCP_ENABLED")
+  mcpEnabled: boolean;
+
+  @doc("MCPが有効でMECALO_PUBLIC_URLが設定済み")
+  oauthEnabled: boolean;
+
+  tokens: ApiToken[];
+}
+
+model TokenInput {
+  @minLength(1)
+  @maxLength(64)
+  name: string;
+
+  scope: TokenScope;
+}
+
+model IssuedToken {
+  token: ApiToken;
+
+  @doc("Authorizationヘッダに指定する値")
+  secret: string;
+}
+
+@doc("OAuth認可リクエストのパラメータ, 名前はRFC 6749に合わせる")
+model OAuthAuthorizationRequest {
+  response_type?: string;
+  client_id?: string;
+  redirect_uri?: string;
+  code_challenge?: string;
+  code_challenge_method?: string;
+  scope?: string;
+  state?: string;
+  resource?: string;
+}
+
+model OAuthConsent {
+  clientId: string;
+  clientName: string;
+
+  @doc("Client ID Metadata Documentのホスト, 動的登録のクライアントは省略")
+  clientHost?: string;
+
+  redirectUri: string;
+  redirectHost: string;
+
+  @doc("localhostへのリダイレクト")
+  loopback: boolean;
+
+  @doc("要求された範囲")
+  scope: TokenScope;
+}
+
+model OAuthCheck {
+  @doc("同意画面の内容, クライアントへエラーを返す場合は省略")
+  consent?: OAuthConsent;
+
+  @doc("同意画面を出さずに移動する先")
+  redirectTo?: string;
+}
+
+model OAuthDecision {
+  request: OAuthAuthorizationRequest;
+  approve: boolean;
+
+  @doc("許可する範囲, 省略時は要求どおり")
+  scope?: TokenScope;
+}
+
+model OAuthRedirect {
+  redirectTo: string;
+}
+
+@doc("OAuthで接続を許可したクライアント")
+model Connection {
+  id: string;
+  clientName: string;
+
+  @doc("URL形式のclient_idのホスト")
+  clientHost?: string;
+
+  scope: TokenScope;
+  createdAt: utcDateTime;
+}
+
 model Credentials {
   @pattern("^[a-zA-Z0-9_.-]{3,32}$")
   loginName: string;

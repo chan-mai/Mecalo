@@ -173,6 +173,8 @@ type repos struct {
 
 func (r repos) Users() port.UserRepository                  { return users(r) }
 func (r repos) Sessions() port.SessionRepository            { return sessions(r) }
+func (r repos) Tokens() port.TokenRepository                { return tokens(r) }
+func (r repos) OAuth() port.OAuthRepository                 { return oauth(r) }
 func (r repos) Datasets() port.DatasetRepository            { return datasets(r) }
 func (r repos) Foods() port.FoodRepository                  { return foods(r) }
 func (r repos) Recipes() port.RecipeRepository              { return recipes(r) }

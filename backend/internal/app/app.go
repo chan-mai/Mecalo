@@ -45,6 +45,8 @@ type Deps struct {
 	Catalogs []port.Catalog
 	// 初回の管理者作成に必要なトークン, 空は不要
 	SetupToken string
+	// nilはClient ID Metadata Document非対応
+	ClientMetadata port.ClientMetadataFetcher
 	// 同期の経過の通知先, nilは通知なし
 	OnSync func(SyncEvent)
 	Hasher port.PasswordHasher
@@ -62,6 +64,8 @@ type App struct {
 	Exports  *Exports
 	Imports  *Imports
 	Sources  *Sources
+	Tokens   *Tokens
+	OAuth    *OAuth
 	// 管理者が変更する設定, 未設定はnil
 	Instance *Instance
 
@@ -71,11 +75,15 @@ type App struct {
 type Options struct {
 	RegistrationOpen  bool
 	OIDCAutoProvision bool
+	MCPEnabled        bool
+	// 末尾の/なし, 空はOAuth無効
+	PublicURL string
 }
 
 func New(d Deps, opt Options) *App {
 	imports := &Imports{d: d}
 	l := newLive(d, opt)
+	oauth := &OAuth{d: d, live: l}
 	return &App{
 		Accounts: &Accounts{d: d, live: l},
 		Foods:    &Foods{d: d, imports: imports, live: l},
@@ -87,6 +95,8 @@ func New(d Deps, opt Options) *App {
 		Exports:  &Exports{d: d},
 		Imports:  imports,
 		Sources:  &Sources{d: d, imports: imports, live: l},
+		Tokens:   &Tokens{d: d, live: l, oauth: oauth},
+		OAuth:    oauth,
 		live:     l,
 	}
 }
@@ -95,6 +105,11 @@ var (
 	one          = decimal.NewFromInt(1)
 	hundredGrams = decimal.NewFromInt(100)
 )
+
+// インスタンスのタイムゾーンでの当日
+func (a *App) Today() calendar.Date {
+	return today(a.Settings.d.Clock)
+}
 
 func today(c port.Clock) calendar.Date {
 	now := c.Now()

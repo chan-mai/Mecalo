@@ -69,6 +69,47 @@ namespace MeApi {
   op completeOnboarding(): NoContentResponse | CommonErrors;
 }
 
+@route("/me/tokens")
+@tag("auth")
+namespace TokensApi {
+  @doc("自身のAPIトークンとMCPサーバの有効状態")
+  @get
+  op list(): TokenList | CommonErrors;
+
+  @doc("MCPサーバ無効時は404, 平文のトークンはこの応答のみ")
+  @post
+  op issue(@body body: TokenInput): IssuedToken | CommonErrors;
+
+  @delete
+  @route("/{id}")
+  op revoke(@path id: string): NoContentResponse | CommonErrors;
+}
+
+@route("/oauth/authorization")
+@tag("auth")
+namespace OAuthApi {
+  @doc("認可リクエストの検証, 不正リクエスト時400")
+  @post
+  @route("/check")
+  op check(@body body: OAuthAuthorizationRequest): OAuthCheck | CommonErrors;
+
+  @doc("同意・拒否, リダイレクト先をレスポンス")
+  @post
+  @route("/decide")
+  op decide(@body body: OAuthDecision): OAuthRedirect | CommonErrors;
+}
+
+@route("/me/connections")
+@tag("auth")
+namespace ConnectionsApi {
+  @get op list(): Connection[] | CommonErrors;
+
+  @doc("許可の取り消し, 発行済みのトーク失効")
+  @delete
+  @route("/{id}")
+  op revoke(@path id: string): NoContentResponse | CommonErrors;
+}
+
 @route("/admin/users")
 @tag("admin")
 namespace AdminApi {

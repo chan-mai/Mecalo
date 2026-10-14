@@ -3,6 +3,7 @@ package httpapi
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -78,6 +79,50 @@ func toAccount(a app.Account) gen.User {
 	out := toUser(a.User)
 	if a.LoginName != "" {
 		out.LoginName = &a.LoginName
+	}
+	return out
+}
+
+func toToken(t port.Token) gen.ApiToken {
+	return gen.ApiToken{Id: t.ID, Name: t.Name, Scope: gen.TokenScope(t.Scope), CreatedAt: t.CreatedAt}
+}
+
+func fromAuthorizationRequest(r gen.OAuthAuthorizationRequest) app.AuthorizationRequest {
+	return app.AuthorizationRequest{
+		ResponseType:        str(r.ResponseType),
+		ClientID:            str(r.ClientId),
+		RedirectURI:         str(r.RedirectUri),
+		CodeChallenge:       str(r.CodeChallenge),
+		CodeChallengeMethod: str(r.CodeChallengeMethod),
+		Scope:               str(r.Scope),
+		State:               str(r.State),
+		Resource:            str(r.Resource),
+	}
+}
+
+func optional(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func toConsent(c app.Consent) gen.OAuthConsent {
+	return gen.OAuthConsent{
+		ClientId:     c.ClientID,
+		ClientName:   c.ClientName,
+		ClientHost:   optional(c.ClientHost),
+		RedirectUri:  c.RedirectURI,
+		RedirectHost: c.RedirectHost,
+		Loopback:     c.Loopback,
+		Scope:        gen.TokenScope(c.Scope),
+	}
+}
+
+func toConnection(g port.OAuthGrant) gen.Connection {
+	out := gen.Connection{Id: g.ID, ClientName: g.ClientName, Scope: gen.TokenScope(g.Scope), CreatedAt: g.CreatedAt}
+	if u, err := url.Parse(g.ClientID); err == nil && u.Scheme == "https" {
+		out.ClientHost = &u.Host
 	}
 	return out
 }

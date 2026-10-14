@@ -505,6 +505,39 @@ export interface paths {
         patch: operations["MeApi_update"];
         trace?: never;
     };
+    "/me/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ConnectionsApi_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/connections/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description 許可の取り消し, 発行済みのトーク失効 */
+        delete: operations["ConnectionsApi_revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/onboarding": {
         parameters: {
             query?: never;
@@ -533,6 +566,40 @@ export interface paths {
         put: operations["MeApi_changePassword"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 自身のAPIトークンとMCPサーバの有効状態 */
+        get: operations["TokensApi_list"];
+        put?: never;
+        /** @description MCPサーバ無効時は404, 平文のトークンはこの応答のみ */
+        post: operations["TokensApi_issue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["TokensApi_revoke"];
         options?: never;
         head?: never;
         patch?: never;
@@ -617,6 +684,40 @@ export interface paths {
         put?: never;
         /** @description 食品の現行データで栄養値を再計算 */
         post: operations["MealsApi_recalculate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/authorization/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 認可リクエストの検証, 不正リクエスト時400 */
+        post: operations["OAuthApi_check"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/authorization/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 同意・拒否, リダイレクト先をレスポンス */
+        post: operations["OAuthApi_decide"];
         delete?: never;
         options?: never;
         head?: never;
@@ -851,6 +952,13 @@ export interface components {
             /** @description 再送時の重複防止キー */
             clientRef?: string;
         };
+        ApiToken: {
+            id: string;
+            name: string;
+            scope: components["schemas"]["TokenScope"];
+            /** Format: date-time */
+            createdAt: string;
+        };
         AuthConfig: {
             /** @description 利用者0件で初回セットアップが必要 */
             setupRequired: boolean;
@@ -869,6 +977,16 @@ export interface components {
              * @description 1単位の重量(g), 省略は不明
              */
             grams?: number;
+        };
+        /** @description OAuthで接続を許可したクライアント */
+        Connection: {
+            id: string;
+            clientName: string;
+            /** @description URL形式のclient_idのホスト */
+            clientHost?: string;
+            scope: components["schemas"]["TokenScope"];
+            /** Format: date-time */
+            createdAt: string;
         };
         CopyMeals: {
             /** Format: date */
@@ -1103,6 +1221,11 @@ export interface components {
                 [key: string]: string;
             };
         };
+        IssuedToken: {
+            token: components["schemas"]["ApiToken"];
+            /** @description Authorizationヘッダに指定する値 */
+            secret: string;
+        };
         /** @enum {string} */
         Level: "deficient" | "low" | "adequate" | "high" | "excessive" | "unknown" | "none";
         /** @description 記録時点の食品情報と栄養値を保持 */
@@ -1187,6 +1310,44 @@ export interface components {
              * @description 元の重量のうち値が判明している割合(0〜1)
              */
             coverage: number;
+        };
+        /** @description OAuth認可リクエストのパラメータ, 名前はRFC 6749に合わせる */
+        OAuthAuthorizationRequest: {
+            response_type?: string;
+            client_id?: string;
+            redirect_uri?: string;
+            code_challenge?: string;
+            code_challenge_method?: string;
+            scope?: string;
+            state?: string;
+            resource?: string;
+        };
+        OAuthCheck: {
+            /** @description 同意画面の内容, クライアントへエラーを返す場合は省略 */
+            consent?: components["schemas"]["OAuthConsent"];
+            /** @description 同意画面を出さずに移動する先 */
+            redirectTo?: string;
+        };
+        OAuthConsent: {
+            clientId: string;
+            clientName: string;
+            /** @description Client ID Metadata Documentのホスト, 動的登録のクライアントは省略 */
+            clientHost?: string;
+            redirectUri: string;
+            redirectHost: string;
+            /** @description localhostへのリダイレクト */
+            loopback: boolean;
+            /** @description 要求された範囲 */
+            scope: components["schemas"]["TokenScope"];
+        };
+        OAuthDecision: {
+            request: components["schemas"]["OAuthAuthorizationRequest"];
+            approve: boolean;
+            /** @description 許可する範囲, 省略時は要求どおり */
+            scope?: components["schemas"]["TokenScope"];
+        };
+        OAuthRedirect: {
+            redirectTo: string;
         };
         PasswordChange: {
             current: string;
@@ -1376,6 +1537,22 @@ export interface components {
             energyKcal: number;
             nutrients: components["schemas"]["NutrientTarget"][];
         };
+        TokenInput: {
+            name: string;
+            scope: components["schemas"]["TokenScope"];
+        };
+        TokenList: {
+            /** @description MECALO_MCP_ENABLED */
+            mcpEnabled: boolean;
+            /** @description MCPが有効でMECALO_PUBLIC_URLが設定済み */
+            oauthEnabled: boolean;
+            tokens: components["schemas"]["ApiToken"][];
+        };
+        /**
+         * @description APIトークンで許可する操作, writeは読み取りを含む
+         * @enum {string}
+         */
+        TokenScope: "read" | "write";
         UpdateMealEntry: {
             /** Format: date */
             date?: string;
@@ -3671,6 +3848,118 @@ export interface operations {
             };
         };
     };
+    ConnectionsApi_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Connection"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    ConnectionsApi_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description There is no content to send for this request, but the headers may be useful. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     MeApi_completeOnboarding: {
         parameters: {
             query?: never;
@@ -3737,6 +4026,178 @@ export interface operations {
                 "application/json": components["schemas"]["PasswordChange"];
             };
         };
+        responses: {
+            /** @description There is no content to send for this request, but the headers may be useful. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    TokensApi_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenList"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    TokensApi_issue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TokenInput"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedToken"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    TokensApi_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
@@ -4095,6 +4556,126 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MealEntry"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    OAuthApi_check: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthAuthorizationRequest"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthCheck"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    OAuthApi_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthDecision"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthRedirect"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
