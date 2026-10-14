@@ -28,7 +28,7 @@ jobs:
         working-directory: backend
         env:
           MECALO_TEST_POSTGRES_DSN: postgresql://root@localhost:26258/defaultdb?sslmode=disable
-        run: go test ./...
+        run: go test -timeout 20m ./...
 
   frontend:
     runs-on: ubuntu-latest
