@@ -155,6 +155,7 @@ export default {
 		items: {
 			MECALO_TIMEZONE: 'Time zone',
 			MECALO_PUBLIC_URL: 'Public URL',
+			MECALO_PUBLIC_URL_ALLOW_HTTP: 'Allow an http public URL other than localhost (not recommended)',
 			MECALO_AUTH_PROVIDERS: 'Login methods',
 			MECALO_REGISTRATION: 'Sign-up',
 			MECALO_OIDC_NAME: 'Name on the login screen',

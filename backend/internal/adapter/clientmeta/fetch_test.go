@@ -73,6 +73,8 @@ func TestDenyPrivate(t *testing.T) {
 	for addr, allowed := range map[string]bool{
 		"127.0.0.1:443": false, "[::1]:443": false, "10.0.0.1:443": false, "192.168.1.1:443": false,
 		"169.254.169.254:80": false, "0.0.0.0:443": false, "[fd00::1]:443": false, "93.184.215.14:443": true,
+		"0.1.2.3:443": false, "100.64.0.1:443": false, "100.127.255.254:443": false, "198.18.0.1:443": false, "198.19.255.1:443": false,
+		"[64:ff9b::a00:1]:443": false, "[::ffff:10.0.0.1]:443": false, "[::ffff:100.64.0.1]:443": false, "100.128.0.1:443": true,
 	} {
 		if err := denyPrivate("tcp", addr, nil); (err == nil) != allowed {
 			t.Errorf("%s: %v", addr, err)

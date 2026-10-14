@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"slices"
@@ -50,6 +51,7 @@ type config struct {
 	FetchUserAgent  string         `env:"MECALO_FETCH_USER_AGENT"`
 	MCPEnabled      bool           `env:"MECALO_MCP_ENABLED"`
 	PublicURL       string         `env:"MECALO_PUBLIC_URL"`
+	PublicHTTP      bool           `env:"MECALO_PUBLIC_URL_ALLOW_HTTP"`
 }
 
 func (c config) LocalAuth() bool   { return slices.Contains(c.AuthProviders, "local") }
@@ -62,6 +64,7 @@ func settingDefs() []app.SettingDef {
 	return []app.SettingDef{
 		{Key: "MECALO_TIMEZONE", Group: "general", Kind: app.SettingText, Default: "Asia/Tokyo"},
 		{Key: "MECALO_PUBLIC_URL", Group: "general", Kind: app.SettingText},
+		{Key: "MECALO_PUBLIC_URL_ALLOW_HTTP", Group: "general", Kind: app.SettingBool, Default: "false"},
 		{Key: "MECALO_AUTH_PROVIDERS", Group: "auth", Kind: app.SettingChoices, Default: "local", Options: []string{"local", "oidc"}},
 		{Key: "MECALO_REGISTRATION", Group: "auth", Kind: app.SettingChoice, Default: "closed", Options: []string{"closed", "open"}},
 		{Key: "MECALO_OIDC_NAME", Group: "oidc", Kind: app.SettingText, Default: "OpenID Connect"},
@@ -110,7 +113,7 @@ func parseConfig(values map[string]string) (config, error) {
 	if !c.LocalAuth() && !c.OIDCEnabled() {
 		return config{}, errors.New("MECALO_AUTH_PROVIDERS must include local or oidc")
 	}
-	if c.PublicURL, err = publicURL(c.PublicURL); err != nil {
+	if c.PublicURL, err = publicURL(c.PublicURL, c.PublicHTTP); err != nil {
 		return config{}, err
 	}
 	if c.OIDCEnabled() && (c.OIDCIssuer == "" || c.OIDCClientID == "" || c.OIDCRedirectURL == "") {
@@ -120,7 +123,7 @@ func parseConfig(values map[string]string) (config, error) {
 }
 
 // スキーム/ホストのみ, 末尾/除去
-func publicURL(raw string) (string, error) {
+func publicURL(raw string, allowHTTP bool) (string, error) {
 	if raw == "" {
 		return "", nil
 	}
@@ -128,5 +131,22 @@ func publicURL(raw string) (string, error) {
 	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil {
 		return "", errors.New("MECALO_PUBLIC_URL must be an http(s) URL without a path, e.g. https://mecalo.example.com")
 	}
+	if u.Scheme == "http" && !allowHTTP && !isLoopback(u.Hostname()) {
+		return "", errors.New("MECALO_PUBLIC_URL must use https except for localhost; set MECALO_PUBLIC_URL_ALLOW_HTTP=true to allow http (not recommended)")
+	}
 	return strings.ToLower(u.Scheme) + "://" + strings.ToLower(u.Host), nil
+}
+
+// 非ループバックのhttp
+func insecurePublicURL(u string) bool {
+	p, err := url.Parse(u)
+	return err == nil && p.Scheme == "http" && !isLoopback(p.Hostname())
+}
+
+func isLoopback(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

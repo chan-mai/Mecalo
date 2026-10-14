@@ -153,6 +153,7 @@ export default {
 		items: {
 			MECALO_TIMEZONE: 'タイムゾーン',
 			MECALO_PUBLIC_URL: '公開URL',
+			MECALO_PUBLIC_URL_ALLOW_HTTP: 'localhost以外のHTTPの公開URLを許可(非推奨)',
 			MECALO_AUTH_PROVIDERS: 'ログイン方法',
 			MECALO_REGISTRATION: '新規登録',
 			MECALO_OIDC_NAME: 'ログイン画面の表示名',

@@ -75,6 +75,7 @@ Mecalo = meal(memory) + calorie
 | `MECALO_FETCH_USER_AGENT` | `Mecalo-Agent/v<バージョン> (https://github.com/chan-mai/Mecalo)` | 外部サイト・APIへ送るUser-Agent, robots.txtは`/`より前の製品名で照合 |
 | `MECALO_MCP_ENABLED` | `false` | MCPサーバ(`/mcp`)を有効にするか |
 | `MECALO_PUBLIC_URL` | なし | 利用者がアクセスするURL(パスなし)。MCPのOAuthに必要 |
+| `MECALO_PUBLIC_URL_ALLOW_HTTP` | `false` | `MECALO_PUBLIC_URL`にlocalhost以外のHTTPのURLを許可する(トークン等が暗号化されず送信されるため非推奨です) |
 
 `MECALO_SOURCES`に指定できる取得元
 

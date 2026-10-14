@@ -9,7 +9,9 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -71,14 +73,26 @@ func (t userAgentTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	return t.rt.RoundTrip(r)
 }
 
+var deniedPrefixes = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"),
+	netip.MustParsePrefix("100.64.0.0/10"),
+	netip.MustParsePrefix("198.18.0.0/15"),
+	netip.MustParsePrefix("64:ff9b::/96"),
+}
+
 func denyPrivate(_, address string, _ syscall.RawConn) error {
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
 		return err
 	}
-	ip := net.ParseIP(host)
-	if ip == nil || ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
-		ip.IsUnspecified() || ip.IsMulticast() || ip.IsInterfaceLocalMulticast() {
+	addr, err := netip.ParseAddr(host)
+	if err != nil {
+		return fmt.Errorf("address %s is not allowed", host)
+	}
+	addr = addr.Unmap()
+	if addr.IsLoopback() || addr.IsPrivate() || addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() ||
+		addr.IsUnspecified() || addr.IsMulticast() || addr.IsInterfaceLocalMulticast() ||
+		slices.ContainsFunc(deniedPrefixes, func(p netip.Prefix) bool { return p.Contains(addr) }) {
 		return fmt.Errorf("address %s is not allowed", host)
 	}
 	return nil

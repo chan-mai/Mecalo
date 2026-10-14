@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 	"sync/atomic"
 	"time"
@@ -39,6 +40,9 @@ func (l *liveState) prepare(ctx context.Context, values map[string]string) (func
 	cfg, err := parseConfig(values)
 	if err != nil {
 		return nil, err
+	}
+	if insecurePublicURL(cfg.PublicURL) {
+		slog.Warn("MECALO_PUBLIC_URL uses http; OAuth tokens and codes are sent without encryption", "url", cfg.PublicURL)
 	}
 	var deps app.Deps
 	if err := configureSources(cfg, &deps); err != nil {
