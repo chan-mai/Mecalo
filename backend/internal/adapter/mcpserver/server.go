@@ -26,8 +26,8 @@ To record a meal, find the food with search_foods, then call add_meal with its i
 Nutrient amounts are absent when unknown; coverage below 1 means only part of the weight has a known value.`
 
 type Options struct {
-	Version string
-	Logger  *slog.Logger
+	Version        string
+	Logger         *slog.Logger
 	AllowedOrigins []string
 }
 
