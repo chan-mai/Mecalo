@@ -1692,6 +1692,84 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ProfileUpdate'
+  /me/connections:
+    get:
+      operationId: ConnectionsApi_list
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Connection'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
+  /me/connections/{id}:
+    delete:
+      operationId: ConnectionsApi_revoke
+      description: 許可の取り消し, 発行済みのトーク失効
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
   /me/onboarding:
     post:
       operationId: MeApi_completeOnboarding
@@ -1765,6 +1843,125 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PasswordChange'
+  /me/tokens:
+    get:
+      operationId: TokensApi_list
+      description: 自身のAPIトークンとMCPサーバの有効状態
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenList'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
+    post:
+      operationId: TokensApi_issue
+      description: MCPサーバ無効時は404, 平文のトークンはこの応答のみ
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuedToken'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenInput'
+  /me/tokens/{id}:
+    delete:
+      operationId: TokensApi_revoke
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
   /meals:
     post:
       operationId: MealsApi_add
@@ -2022,6 +2219,94 @@ paths:
                 $ref: '#/components/schemas/Problem'
       tags:
         - meals
+  /oauth/authorization/check:
+    post:
+      operationId: OAuthApi_check
+      description: 認可リクエストの検証, 不正リクエスト時400
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthCheck'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthAuthorizationRequest'
+  /oauth/authorization/decide:
+    post:
+      operationId: OAuthApi_decide
+      description: 同意・拒否, リダイレクト先をレスポンス
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthRedirect'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthDecision'
   /recipes:
     post:
       operationId: RecipesApi_create
@@ -2771,6 +3056,23 @@ components:
           type: string
           maxLength: 64
           description: 再送時の重複防止キー
+    ApiToken:
+      type: object
+      required:
+        - id
+        - name
+        - scope
+        - createdAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        scope:
+          $ref: '#/components/schemas/TokenScope'
+        createdAt:
+          type: string
+          format: date-time
     AuthConfig:
       type: object
       required:
@@ -2808,6 +3110,27 @@ components:
           minimum: 0
           exclusiveMinimum: true
       description: 栄養値の基準量, 省略は可食部100g
+    Connection:
+      type: object
+      required:
+        - id
+        - clientName
+        - scope
+        - createdAt
+      properties:
+        id:
+          type: string
+        clientName:
+          type: string
+        clientHost:
+          type: string
+          description: URL形式のclient_idのホスト
+        scope:
+          $ref: '#/components/schemas/TokenScope'
+        createdAt:
+          type: string
+          format: date-time
+      description: OAuthで接続を許可したクライアント
     CopyMeals:
       type: object
       required:
@@ -3355,6 +3678,17 @@ components:
           additionalProperties:
             type: string
           description: 変更する項目のみ, キーは環境変数名
+    IssuedToken:
+      type: object
+      required:
+        - token
+        - secret
+      properties:
+        token:
+          $ref: '#/components/schemas/ApiToken'
+        secret:
+          type: string
+          description: Authorizationヘッダに指定する値
     Level:
       type: string
       enum:
@@ -3531,6 +3865,85 @@ components:
           type: number
           format: double
           description: 元の重量のうち値が判明している割合(0〜1)
+    OAuthAuthorizationRequest:
+      type: object
+      properties:
+        response_type:
+          type: string
+        client_id:
+          type: string
+        redirect_uri:
+          type: string
+        code_challenge:
+          type: string
+        code_challenge_method:
+          type: string
+        scope:
+          type: string
+        state:
+          type: string
+        resource:
+          type: string
+      description: OAuth認可リクエストのパラメータ, 名前はRFC 6749に合わせる
+    OAuthCheck:
+      type: object
+      properties:
+        consent:
+          allOf:
+            - $ref: '#/components/schemas/OAuthConsent'
+          description: 同意画面の内容, クライアントへエラーを返す場合は省略
+        redirectTo:
+          type: string
+          description: 同意画面を出さずに移動する先
+    OAuthConsent:
+      type: object
+      required:
+        - clientId
+        - clientName
+        - redirectUri
+        - redirectHost
+        - loopback
+        - scope
+      properties:
+        clientId:
+          type: string
+        clientName:
+          type: string
+        clientHost:
+          type: string
+          description: Client ID Metadata Documentのホスト, 動的登録のクライアントは省略
+        redirectUri:
+          type: string
+        redirectHost:
+          type: string
+        loopback:
+          type: boolean
+          description: localhostへのリダイレクト
+        scope:
+          allOf:
+            - $ref: '#/components/schemas/TokenScope'
+          description: 要求された範囲
+    OAuthDecision:
+      type: object
+      required:
+        - request
+        - approve
+      properties:
+        request:
+          $ref: '#/components/schemas/OAuthAuthorizationRequest'
+        approve:
+          type: boolean
+        scope:
+          allOf:
+            - $ref: '#/components/schemas/TokenScope'
+          description: 許可する範囲, 省略時は要求どおり
+    OAuthRedirect:
+      type: object
+      required:
+        - redirectTo
+      properties:
+        redirectTo:
+          type: string
     PasswordChange:
       type: object
       required:
@@ -3953,6 +4366,41 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/NutrientTarget'
+    TokenInput:
+      type: object
+      required:
+        - name
+        - scope
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        scope:
+          $ref: '#/components/schemas/TokenScope'
+    TokenList:
+      type: object
+      required:
+        - mcpEnabled
+        - oauthEnabled
+        - tokens
+      properties:
+        mcpEnabled:
+          type: boolean
+          description: MECALO_MCP_ENABLED
+        oauthEnabled:
+          type: boolean
+          description: MCPが有効でMECALO_PUBLIC_URLが設定済み
+        tokens:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiToken'
+    TokenScope:
+      type: string
+      enum:
+        - read
+        - write
+      description: APIトークンで許可する操作, writeは読み取りを含む
     UpdateMealEntry:
       type: object
       properties:

@@ -16,7 +16,7 @@ test:
 
 # MECALO_TEST_POSTGRES_DSN の CockroachDB でも契約テストを実行
 test-cockroach:
-	cd backend && MECALO_TEST_POSTGRES_DSN=$${MECALO_TEST_POSTGRES_DSN:-postgresql://root@localhost:26257/defaultdb?sslmode=disable} go test ./internal/app/...
+	cd backend && MECALO_TEST_POSTGRES_DSN=$${MECALO_TEST_POSTGRES_DSN:-postgresql://root@localhost:26257/defaultdb?sslmode=disable} go test -timeout 20m ./internal/app/...
 
 dev-backend:
 	cd backend && go tool air

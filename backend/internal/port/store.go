@@ -31,6 +31,8 @@ type Store interface {
 type Repositories interface {
 	Users() UserRepository
 	Sessions() SessionRepository
+	Tokens() TokenRepository
+	OAuth() OAuthRepository
 	Datasets() DatasetRepository
 	Foods() FoodRepository
 	Recipes() RecipeRepository
@@ -84,6 +86,25 @@ type SessionRepository interface {
 	Delete(ctx context.Context, id string) error
 	DeleteExpired(ctx context.Context, now time.Time) error
 	DeleteForUser(ctx context.Context, id user.ID) error
+}
+
+// 外部クライアント用のAPIトークン
+type Token struct {
+	ID     string
+	UserID user.ID
+	Name   string
+	Scope  user.Scope
+	// トークンのハッシュ
+	Hash      string
+	CreatedAt time.Time
+}
+
+type TokenRepository interface {
+	Create(ctx context.Context, t Token) error
+	FindByHash(ctx context.Context, hash string) (Token, error)
+	// 作成順
+	List(ctx context.Context, owner user.ID) ([]Token, error)
+	Delete(ctx context.Context, owner user.ID, id string) error
 }
 
 type DatasetRepository interface {

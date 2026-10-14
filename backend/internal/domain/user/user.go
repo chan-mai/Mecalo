@@ -23,3 +23,20 @@ type User struct {
 func (u User) IsAdmin() bool {
 	return u.Role == RoleAdmin
 }
+
+// APIトークンで許可する操作
+type Scope string
+
+const (
+	ScopeRead  Scope = "read"
+	ScopeWrite Scope = "write"
+)
+
+func (s Scope) Valid() bool {
+	return s == ScopeRead || s == ScopeWrite
+}
+
+// writeはreadを含む
+func (s Scope) Allows(need Scope) bool {
+	return s == ScopeWrite || s == need
+}

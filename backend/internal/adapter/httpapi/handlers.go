@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 
 	"github.com/chan-mai/mecalo/backend/internal/adapter/httpapi/gen"
@@ -121,6 +122,81 @@ func (s *server) MeApiCompleteOnboarding(ctx context.Context, _ gen.MeApiComplet
 		return nil, err
 	}
 	return gen.MeApiCompleteOnboarding204Response{}, nil
+}
+
+func (s *server) TokensApiList(ctx context.Context, _ gen.TokensApiListRequestObject) (gen.TokensApiListResponseObject, error) {
+	list, err := s.app.Tokens.List(ctx, currentUser(ctx))
+	if err != nil {
+		return nil, err
+	}
+	out := gen.TokensApiList200JSONResponse{McpEnabled: s.app.Tokens.Enabled(), OauthEnabled: s.app.OAuth.Enabled(), Tokens: []gen.ApiToken{}}
+	for _, t := range list {
+		out.Tokens = append(out.Tokens, toToken(t))
+	}
+	return out, nil
+}
+
+func (s *server) TokensApiIssue(ctx context.Context, req gen.TokensApiIssueRequestObject) (gen.TokensApiIssueResponseObject, error) {
+	t, err := s.app.Tokens.Issue(ctx, currentUser(ctx), req.Body.Name, user.Scope(req.Body.Scope))
+	if err != nil {
+		return nil, err
+	}
+	return gen.TokensApiIssue200JSONResponse{Token: toToken(t.Token), Secret: t.Secret}, nil
+}
+
+func (s *server) TokensApiRevoke(ctx context.Context, req gen.TokensApiRevokeRequestObject) (gen.TokensApiRevokeResponseObject, error) {
+	if err := s.app.Tokens.Revoke(ctx, currentUser(ctx), req.Id); err != nil {
+		return nil, err
+	}
+	return gen.TokensApiRevoke204Response{}, nil
+}
+
+func (s *server) OAuthApiCheck(ctx context.Context, req gen.OAuthApiCheckRequestObject) (gen.OAuthApiCheckResponseObject, error) {
+	c, err := s.app.OAuth.Check(ctx, fromAuthorizationRequest(*req.Body))
+	var redirect *app.AuthorizationRedirect
+	if errors.As(err, &redirect) {
+		return gen.OAuthApiCheck200JSONResponse{RedirectTo: &redirect.URL}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	consent := toConsent(c)
+	return gen.OAuthApiCheck200JSONResponse{Consent: &consent}, nil
+}
+
+func (s *server) OAuthApiDecide(ctx context.Context, req gen.OAuthApiDecideRequestObject) (gen.OAuthApiDecideResponseObject, error) {
+	var scope user.Scope
+	if req.Body.Scope != nil {
+		scope = user.Scope(*req.Body.Scope)
+	}
+	to, err := s.app.OAuth.Decide(ctx, currentUser(ctx), fromAuthorizationRequest(req.Body.Request), req.Body.Approve, scope)
+	var redirect *app.AuthorizationRedirect
+	if errors.As(err, &redirect) {
+		return gen.OAuthApiDecide200JSONResponse{RedirectTo: redirect.URL}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return gen.OAuthApiDecide200JSONResponse{RedirectTo: to}, nil
+}
+
+func (s *server) ConnectionsApiList(ctx context.Context, _ gen.ConnectionsApiListRequestObject) (gen.ConnectionsApiListResponseObject, error) {
+	grants, err := s.app.OAuth.Grants(ctx, currentUser(ctx))
+	if err != nil {
+		return nil, err
+	}
+	out := gen.ConnectionsApiList200JSONResponse{}
+	for _, g := range grants {
+		out = append(out, toConnection(g))
+	}
+	return out, nil
+}
+
+func (s *server) ConnectionsApiRevoke(ctx context.Context, req gen.ConnectionsApiRevokeRequestObject) (gen.ConnectionsApiRevokeResponseObject, error) {
+	if err := s.app.OAuth.RevokeGrant(ctx, currentUser(ctx), req.Id); err != nil {
+		return nil, err
+	}
+	return gen.ConnectionsApiRevoke204Response{}, nil
 }
 
 func (s *server) AdminApiList(ctx context.Context, _ gen.AdminApiListRequestObject) (gen.AdminApiListResponseObject, error) {

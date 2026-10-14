@@ -32,3 +32,8 @@ export const passwordChangeSchema = v.object({
 	current: v.pipe(v.string(), v.minLength(1, 'errors.validation.required')),
 	next: v.pipe(v.string(), v.minLength(8, 'errors.validation.passwordLength')),
 }) satisfies v.GenericSchema<unknown, Schemas['PasswordChange']>;
+
+export const tokenSchema = v.object({
+	name: v.pipe(v.string(), v.trim(), v.minLength(1, 'errors.validation.required'), v.maxLength(64, 'errors.validation.maxLength')),
+	scope: v.picklist(['read', 'write']),
+}) satisfies v.GenericSchema<unknown, Schemas['TokenInput']>;

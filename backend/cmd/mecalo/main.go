@@ -21,10 +21,14 @@ import (
 	"time"
 
 	"github.com/chan-mai/mecalo/backend/data"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/clientmeta"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/dri"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/mext"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/openfoodfacts"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/foodsource/webfetch"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/httpapi"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/mcpserver"
+	"github.com/chan-mai/mecalo/backend/internal/adapter/oauthserver"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/password"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/reading"
 	"github.com/chan-mai/mecalo/backend/internal/adapter/sqlstore"
@@ -131,6 +135,8 @@ func open(ctx context.Context, cfg bootConfig, serving bool) (*runtime, error) {
 		IDs:       system.UUIDs{},
 		Reference: ref,
 		Hasher:    password.Default(),
+
+		ClientMetadata: clientmeta.New(fmt.Sprintf(webfetch.DefaultUserAgent, version)),
 	}
 	deps.OnSync = logSync
 	generated := cfg.SetupToken == ""
@@ -187,10 +193,14 @@ func serve(ctx context.Context, cfg bootConfig) error {
 	if err := logSetup(ctx, rt); err != nil {
 		return err
 	}
-	handler, err := httpapi.NewHandler(rt.app, opt)
+	api, err := httpapi.NewHandler(rt.app, opt)
 	if err != nil {
 		return err
 	}
+	handler := http.NewServeMux()
+	handler.Handle(mcpserver.Path, mcpserver.NewHandler(rt.app, mcpserver.Options{Version: version, Logger: slog.Default(), AllowedOrigins: cfg.CORSOrigins}))
+	oauthserver.Register(handler, rt.app, slog.Default())
+	handler.Handle("/", api)
 
 	srv := &http.Server{
 		Addr:              cfg.Listen,
@@ -238,6 +248,9 @@ func purgeSessions(ctx context.Context, a *app.App) {
 	for {
 		if err := a.Accounts.PurgeExpiredSessions(ctx); err != nil && ctx.Err() == nil {
 			slog.Warn("purge sessions", "error", err)
+		}
+		if err := a.OAuth.Purge(ctx); err != nil && ctx.Err() == nil {
+			slog.Warn("purge oauth tokens", "error", err)
 		}
 		select {
 		case <-ctx.Done():
