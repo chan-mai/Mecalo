@@ -64,6 +64,7 @@ const links = computed(() => [
 	{ to: '/history', label: 'pages.settings.links.weight' },
 	{ to: '/settings/data', label: 'pages.settings.links.data' },
 	{ to: '/settings/account', label: 'pages.settings.links.account' },
+	{ to: '/settings/mcp', label: 'pages.settings.links.mcp' },
 	{ to: '/about', label: 'pages.settings.links.about' },
 ]);
 

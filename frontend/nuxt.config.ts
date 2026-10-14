@@ -91,7 +91,7 @@ export default defineNuxtConfig({
 		},
 		workbox: {
 			navigateFallback: '/',
-			navigateFallbackDenylist: [/^\/api\//],
+			navigateFallbackDenylist: [/^\/api\//, /^\/mcp$/, /^\/\.well-known\//],
 			globPatterns: ['**/*.{js,css,html,png,svg,ico,glb,wasm,woff2}'],
 			maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
 			// オフライン表示用
