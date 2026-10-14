@@ -62,7 +62,7 @@ func (l *liveState) prepare(ctx context.Context, values map[string]string) (func
 	}
 	return func() {
 		l.app.Reconfigure(app.Live{
-			Options:  app.Options{RegistrationOpen: cfg.Registration(), OIDCAutoProvision: cfg.OIDCAutoCreate},
+			Options:  app.Options{RegistrationOpen: cfg.Registration(), OIDCAutoProvision: cfg.OIDCAutoCreate, MCPEnabled: cfg.MCPEnabled, PublicURL: cfg.PublicURL},
 			Lookup:   deps.Lookup,
 			Finders:  deps.Finders,
 			Catalogs: deps.Catalogs,

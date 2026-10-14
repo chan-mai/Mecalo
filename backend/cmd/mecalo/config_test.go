@@ -52,3 +52,21 @@ func TestSettingDefs(t *testing.T) {
 		t.Error("unknown timezone accepted")
 	}
 }
+
+func TestPublicURL(t *testing.T) {
+	ok := map[string]string{
+		"":                            "",
+		"https://Mecalo.Example.com/": "https://mecalo.example.com",
+		"http://localhost:3000":       "http://localhost:3000",
+	}
+	for in, want := range ok {
+		if got, err := publicURL(in); err != nil || got != want {
+			t.Errorf("publicURL(%q) = %q, %v", in, got, err)
+		}
+	}
+	for _, in := range []string{"mecalo.example.com", "ftp://example.com", "https://example.com/mecalo", "https://example.com?x=1"} {
+		if _, err := publicURL(in); err == nil {
+			t.Errorf("publicURL(%q) accepted", in)
+		}
+	}
+}

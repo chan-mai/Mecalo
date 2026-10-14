@@ -3,8 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"slices"
+	"strings"
 	"time"
 	_ "time/tzdata"
 
@@ -46,6 +48,8 @@ type config struct {
 	TabecalKey      string         `env:"MECALO_TABECAL_KEY"`
 	SyncInterval    time.Duration  `env:"MECALO_SYNC_INTERVAL"`
 	FetchUserAgent  string         `env:"MECALO_FETCH_USER_AGENT"`
+	MCPEnabled      bool           `env:"MECALO_MCP_ENABLED"`
+	PublicURL       string         `env:"MECALO_PUBLIC_URL"`
 }
 
 func (c config) LocalAuth() bool   { return slices.Contains(c.AuthProviders, "local") }
@@ -57,6 +61,7 @@ func (c config) Registration() bool {
 func settingDefs() []app.SettingDef {
 	return []app.SettingDef{
 		{Key: "MECALO_TIMEZONE", Group: "general", Kind: app.SettingText, Default: "Asia/Tokyo"},
+		{Key: "MECALO_PUBLIC_URL", Group: "general", Kind: app.SettingText},
 		{Key: "MECALO_AUTH_PROVIDERS", Group: "auth", Kind: app.SettingChoices, Default: "local", Options: []string{"local", "oidc"}},
 		{Key: "MECALO_REGISTRATION", Group: "auth", Kind: app.SettingChoice, Default: "closed", Options: []string{"closed", "open"}},
 		{Key: "MECALO_OIDC_NAME", Group: "oidc", Kind: app.SettingText, Default: "OpenID Connect"},
@@ -72,6 +77,7 @@ func settingDefs() []app.SettingDef {
 		{Key: "MECALO_TABECAL_KEY", Group: "sources", Kind: app.SettingSecret},
 		{Key: "MECALO_SYNC_INTERVAL", Group: "sources", Kind: app.SettingDuration, Default: "168h"},
 		{Key: "MECALO_FETCH_USER_AGENT", Group: "sources", Kind: app.SettingText, Default: fmt.Sprintf(webfetch.DefaultUserAgent, version)},
+		{Key: "MECALO_MCP_ENABLED", Group: "mcp", Kind: app.SettingBool, Default: "false"},
 	}
 }
 
@@ -104,8 +110,23 @@ func parseConfig(values map[string]string) (config, error) {
 	if !c.LocalAuth() && !c.OIDCEnabled() {
 		return config{}, errors.New("MECALO_AUTH_PROVIDERS must include local or oidc")
 	}
+	if c.PublicURL, err = publicURL(c.PublicURL); err != nil {
+		return config{}, err
+	}
 	if c.OIDCEnabled() && (c.OIDCIssuer == "" || c.OIDCClientID == "" || c.OIDCRedirectURL == "") {
 		return config{}, errors.New("MECALO_OIDC_ISSUER, MECALO_OIDC_CLIENT_ID and MECALO_OIDC_REDIRECT_URL are required for oidc")
 	}
 	return c, nil
+}
+
+// スキーム/ホストのみ, 末尾/除去
+func publicURL(raw string) (string, error) {
+	if raw == "" {
+		return "", nil
+	}
+	u, err := url.Parse(strings.TrimSuffix(raw, "/"))
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil {
+		return "", errors.New("MECALO_PUBLIC_URL must be an http(s) URL without a path, e.g. https://mecalo.example.com")
+	}
+	return strings.ToLower(u.Scheme) + "://" + strings.ToLower(u.Host), nil
 }
